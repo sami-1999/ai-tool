@@ -2,7 +2,7 @@
 namespace App\Http\Interfaces;
 use App\Models\User;
 
-interface UserRepositoryInterface
+interface UserInterface
 {
     public function create(array $data): User;
     public function findByEmail(string $email): ?User;

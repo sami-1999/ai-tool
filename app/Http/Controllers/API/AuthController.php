@@ -34,20 +34,14 @@ class AuthController extends Controller
 
     public function sendResetLink(PasswordEmailRequest $request)
     {
-        $status = $this->passwordResetService->sendPasswordResetLink($request->validated());
-        if ($status === Password::RESET_LINK_SENT) {
-            return ApiResponse::success(null, 'Password reset link sent to your email');
-        }
-        return ApiResponse::error(__($status), 400);
+        $this->passwordResetService->sendPasswordResetLink($request->validated());
+        return ApiResponse::success(null, 'Password reset link sent to your email');
     }
 
     public function resetPassword(PasswordResetRequest $request)
     {
-        $status = $this->passwordResetService->resetPassword($request->validated());
-        if ($status === Password::PASSWORD_RESET) {
-            return ApiResponse::success(null, 'Password reset successfully');
-        }
-        return ApiResponse::error(__($status), 400);
+        $this->passwordResetService->resetPassword($request->validated());
+        return ApiResponse::success(null, 'Password reset successfully');
     }
 
     public function logout(Request $request)

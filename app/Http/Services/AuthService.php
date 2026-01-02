@@ -2,24 +2,21 @@
 
 namespace App\Http\Services;
 
-use App\Http\Interfaces\UserRepositoryInterface;
+use App\Http\Interfaces\UserInterface;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
     public function __construct(
-        private UserRepositoryInterface $userRepo
+        private UserInterface $userRepo
     ) {}
 
     public function register($request)
     {
 
-        $user = $this->userRepo->create([
-            'name'     => $request['name'],
-            'email'    => $request['email'],
-            'password' => Hash::make($request['password']),
-        ]);
+        $user = $this->userRepo->create($request);
 
         $token = $user->createToken('auth')->accessToken;
 
@@ -28,18 +25,19 @@ class AuthService
 
     public function login($request)
     {
-        $user = $this->userRepo->findByEmail($request['email']);
+        if (!Auth::attempt(['email'    => $request['email'], 'password' => $request['password']])) {
 
-        if (!$user || !Hash::check($request['password'], $user['password'])) {
             throw ValidationException::withMessages([
-                'email' => ['Invalid credentials']
+                'email' => ['Invalid credentials'],
             ]);
+            
         }
 
-        return [
-            'token' => $user->createToken('auth')->accessToken,
-            'user' => $user
-        ];
+        $user = Auth::user();
+
+        $token = $user->createToken('auth')->accessToken;
+
+        return compact('user', 'token');
     }
 
     public function logout($user)

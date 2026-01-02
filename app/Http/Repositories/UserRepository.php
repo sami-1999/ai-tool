@@ -2,10 +2,10 @@
 
 namespace App\Http\Repositories;
 
-use App\Http\Interfaces\UserRepositoryInterface;
+use App\Http\Interfaces\UserInterface;
 use App\Models\User;
 
-class UserRepository implements UserRepositoryInterface
+class UserRepository implements UserInterface
 {
     public function create(array $data): User
     {

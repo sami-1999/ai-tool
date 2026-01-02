@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Http\Interfaces\UserRepositoryInterface;
+use App\Http\Interfaces\UserInterface;
 use App\Http\Repositories\UserRepository;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -16,8 +16,12 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         app()->bind(
-            UserRepositoryInterface::class,
+            UserInterface::class,
             UserRepository::class
+        );
+        app()->bind(
+            'App\Http\Interfaces\UserProfileInterface',
+            'App\Http\Repositories\UserProfileRepository'
         );
     }
 

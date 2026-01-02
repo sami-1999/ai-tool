@@ -1,13 +1,9 @@
 <?php
 
 use App\Http\Controllers\API\AuthController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\API\UserProfileController;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
-
-// Route::get('/user', function (Request $request) {
-//     return $request->user();
-// })->middleware('auth:api');
-
 
 
 Route::controller(AuthController::class)->group(function () {
@@ -16,4 +12,9 @@ Route::controller(AuthController::class)->group(function () {
     Route::post('/logout', 'logout')->middleware('auth:api');
     Route::post('forgot-password', 'sendResetLink');
     Route::post('reset-password', 'resetPassword');
+});
+
+Route::controller(UserProfileController::class)->middleware('auth:api')->group(function () {
+    Route::get('/user/{id}/profile', 'profile');
+    Route::post('/change-password', 'changePassword');
 });

@@ -2,7 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Responses\ApiResponse;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Contracts\Validation\Validator;
+
 
 class RegisterRequest extends FormRequest
 {
@@ -26,5 +30,11 @@ class RegisterRequest extends FormRequest
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
         ];
+    }
+    protected function failedValidation(Validator $validator)
+    {
+        throw new HttpResponseException(
+            ApiResponse::validation($validator->errors()->toArray())
+        );
     }
 }
