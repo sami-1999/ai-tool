@@ -44,6 +44,6 @@ class AuthService
 
     public function logout($user)
     {
-        $user->tokens()->delete();
+        $user->currentAccessToken()->revoke();
     }
 }
