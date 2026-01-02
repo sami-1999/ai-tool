@@ -9,6 +9,6 @@ class UserProfileRepository implements UserProfileInterface
 {
     public function find($id): User
     {
-        return User::find($id);
+        return User::with('profile')->find($id);
     }
 }
