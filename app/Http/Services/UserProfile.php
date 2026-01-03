@@ -10,6 +10,11 @@ class UserProfile
         private UserProfileRepository $userRepo
     ) {}
 
+    public function create(array $data)
+    {
+        return $this->userRepo->create($data);
+    }
+
     public function profile($id)
     {
         return $this->userRepo->find($id);
