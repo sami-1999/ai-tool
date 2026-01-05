@@ -7,6 +7,10 @@ use App\Models\Skill;
 
 class SkillRepository implements SkillInterface
 {
+    public function getAll()
+    {
+        return Skill::all();
+    }
 
     public function store(array $data)
     {

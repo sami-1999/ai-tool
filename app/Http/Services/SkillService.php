@@ -11,6 +11,11 @@ class SkillService
         private SkillRepository $skillRepo
     ) {}
 
+    public function index()
+    {
+        return $this->skillRepo->getAll();
+    }
+
     public function store(array $data)
     {
         return $this->skillRepo->store($data);

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\SkillStoreRequest,SkillUpdateRequest;
-use App\Http\Requests\SkillUpdateRequest as RequestsSkillUpdateRequest;
+use App\Http\Requests\SkillStoreRequest;
+use App\Http\Requests\SkillUpdateRequest;
 use App\Http\Responses\ApiResponse;
 use App\Http\Services\SkillService;
 use Illuminate\Http\Request;
@@ -20,7 +20,8 @@ class SkillController extends Controller
      */
     public function index()
     {
-        //
+        $data = $this->skillService->index();
+        return ApiResponse::success($data, 'Skills retrieved successfully');
     }
 
     /**
@@ -44,7 +45,7 @@ class SkillController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(RequestsSkillUpdateRequest $request, string $id)
+    public function update(SkillUpdateRequest $request, string $id)
     {
         $data = $this->skillService->update($request->validated(), $id);
         return ApiResponse::success($data, 'Skill updated successfully');
