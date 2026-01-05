@@ -4,6 +4,6 @@ use App\Models\User;
 
 interface UserProfileInterface
 {
-    public function create(array $data);
-    public function find(array $data): User;
+    public function update(array $data, $id);
+    public function find($id): User;
 }

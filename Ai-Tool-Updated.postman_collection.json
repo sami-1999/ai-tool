@@ -1,0 +1,912 @@
+{
+	"info": {
+		"_postman_id": "74a812e8-a8dd-4806-ab4b-8c6c7a8753b2",
+		"name": "AI Proposal Generator - Complete Collection",
+		"description": "Complete API collection for AI Proposal Generator with Claude & OpenAI support",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "47812198"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Muhammad Sami\",\n    \"email\": \"mohammadsami501@gmail.com\",\n    \"password\": \"secret123\",\n    \"password_confirmation\": \"secret123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/register",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"register"
+							]
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"var token = jsonData.data.token;",
+									"",
+									"if(token) {",
+									"    pm.environment.set(\"token\", token);",
+									"}",
+									"console.log(token)"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"mohammadsami501@gmail.com\",\n    \"password\": \"secret123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/login",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"login"
+							]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/logout",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"logout"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Profile",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/user/profile/1",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"user",
+								"profile",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Full Stack Laravel Developer\",\n    \"years_experience\": 5,\n    \"default_tone\": \"professional\",\n    \"writing_style_notes\": \"Concise, human-like, always ask 1 relevant question\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/user/profile/1",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"user",
+								"profile",
+								"1"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Skills",
+			"item": [
+				{
+					"name": "List Skills",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/skill",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"skill"
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Skill",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Laravel\",\n    \"status\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/skill",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"skill"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Skill",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/skill/1",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"skill",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Skill",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Laravel Framework\",\n    \"status\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/skill/1",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"skill",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Skill",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/skill/1",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"skill",
+								"1"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Projects",
+			"item": [
+				{
+					"name": "List Projects",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/project",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"project"
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Project",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"E-commerce Laravel Application\",\n    \"description\": \"Built a complete e-commerce platform using Laravel with payment integration, inventory management, and admin dashboard. Implemented advanced features like multi-vendor support and real-time notifications.\",\n    \"industry\": \"ecommerce\",\n    \"challenges\": \"Complex payment gateway integration and performance optimization for high traffic\",\n    \"outcome\": \"Successfully delivered on time, handled 10K+ concurrent users, 40% increase in client revenue\",\n    \"skills\": [1, 2, 3]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/project",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"project"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Project",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/project/1",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"project",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Project",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Advanced E-commerce Laravel Platform\",\n    \"description\": \"Updated description with more details...\",\n    \"skills\": [1, 2, 3, 4]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/project/1",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"project",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Project",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/project/1",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"project",
+								"1"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Proposals",
+			"item": [
+				{
+					"name": "List User Proposals",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/proposals",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"proposals"
+							]
+						}
+					}
+				},
+				{
+					"name": "Generate Proposal (Default Provider)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"job_description\": \"Looking for an experienced Laravel developer to build a comprehensive task management system. The project involves creating REST APIs, implementing user authentication, role-based permissions, real-time notifications, and a clean admin dashboard. Requirements include Laravel 10+, MySQL database design, API documentation, and integration with third-party services. The ideal candidate should have 3+ years of Laravel experience and strong knowledge of modern PHP development practices.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/proposals/generate",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"proposals",
+								"generate"
+							]
+						}
+					}
+				},
+				{
+					"name": "Generate Proposal (Claude)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"job_description\": \"Need a skilled React developer to build a modern e-commerce frontend. Project includes product catalog, shopping cart, user authentication, payment integration, responsive design, and admin panel. Must have experience with React 18+, TypeScript, Next.js, and modern state management. Looking for clean code, performance optimization, and SEO-friendly implementation.\",\n    \"provider\": \"claude\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/proposals/generate",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"proposals",
+								"generate"
+							]
+						}
+					}
+				},
+				{
+					"name": "Generate Proposal (OpenAI)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"job_description\": \"Seeking a Python Django developer for a healthcare management system. Project involves patient records, appointment scheduling, doctor portal, medical billing, reports generation, and HIPAA compliance. Must have Django 4+, PostgreSQL, REST API development, and healthcare domain knowledge. Security and data privacy are critical requirements.\",\n    \"provider\": \"openai\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/proposals/generate",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"proposals",
+								"generate"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Proposal",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/proposals/1",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"proposals",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Submit Proposal Feedback (Success)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"success\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/proposals/1/feedback",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"proposals",
+								"1",
+								"feedback"
+							]
+						}
+					}
+				},
+				{
+					"name": "Submit Proposal Feedback (Failed)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"success\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/proposals/1/feedback",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"proposals",
+								"1",
+								"feedback"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "AI Testing",
+			"item": [
+				{
+					"name": "Test OpenAI Connection",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/test/openai",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"test",
+								"openai"
+							]
+						}
+					}
+				},
+				{
+					"name": "Test Claude Connection",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/test/claude",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"test",
+								"claude"
+							]
+						}
+					}
+				},
+				{
+					"name": "Test OpenAI Proposal Generation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"job_description\": \"Looking for a Laravel developer to build a simple API for managing tasks. Need someone with PHP, Laravel, and database experience.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/test/proposal-generation",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"test",
+								"proposal-generation"
+							]
+						}
+					}
+				},
+				{
+					"name": "Test Claude Proposal Generation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"job_description\": \"Looking for a Laravel developer to build a simple API for managing tasks. Need someone with PHP, Laravel, and database experience.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/test/claude-proposal-generation",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"test",
+								"claude-proposal-generation"
+							]
+						}
+					}
+				},
+				{
+					"name": "Compare AI Providers",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"prompt\": \"Generate a professional Upwork proposal for a Laravel development project. Keep it under 100 words and ask one relevant question.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/test/compare-providers",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"test",
+								"compare-providers"
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseURL",
+			"value": "http://localhost:8000/",
+			"type": "string"
+		}
+	]
+}

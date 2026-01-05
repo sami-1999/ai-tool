@@ -14,14 +14,15 @@ class UserProfileController extends Controller
         private UserProfile $userProfile
     ) {}
 
-    public function create(UserProfileStoreRequest $request)
+    public function updateProfile(UserProfileStoreRequest $request, $id)
     {
-        $data = $this->userProfile->create($request->validated());
-        return ApiResponse::success($data, 'User  successful', 201);
+        $data = $this->userProfile->update($request->validated(), $id);
+        return ApiResponse::success($data, 'User profile updated successfully', 201);
     }
 
     public function profile($id)
     {
+        dd($id);
         return $this->userProfile->profile($id);
     }
 }

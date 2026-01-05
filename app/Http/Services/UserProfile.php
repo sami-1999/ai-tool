@@ -10,9 +10,9 @@ class UserProfile
         private UserProfileRepository $userRepo
     ) {}
 
-    public function create(array $data)
+    public function update(array $data, $id)
     {
-        return $this->userRepo->create($data);
+        return $this->userRepo->update($data, $id);
     }
 
     public function profile($id)

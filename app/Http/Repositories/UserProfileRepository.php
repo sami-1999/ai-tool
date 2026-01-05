@@ -9,9 +9,9 @@ use App\Models\UserProfile;
 class UserProfileRepository implements UserProfileInterface
 {
 
-    public function create(array $data)
+    public function update(array $data, $id)
     {
-        return UserProfile::create($data);
+        return UserProfile::where('user_id', $id)->update($data);
     }
     public function find($id): User
     {
