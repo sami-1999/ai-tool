@@ -18,12 +18,16 @@ class JobAnalysisService
         // Extract required skills
         $skills = $this->extractSkills($jobDescription);
         
+        // Extract integrations/tools
+        $integrations = $this->extractIntegrations($jobDescription);
+        
         // Extract industry
         $industry = $this->detectIndustry($jobDescription);
         
         return [
             'job_type' => $jobType,
             'skills' => $skills,
+            'integrations' => $integrations,
             'industry' => $industry,
             'description' => $jobDescription
         ];
@@ -80,6 +84,32 @@ class JobAnalysisService
         }
 
         return $foundSkills;
+    }
+
+    /**
+     * Extract integrations/tools from job description
+     */
+    private function extractIntegrations(string $description): array
+    {
+        $description = strtolower($description);
+        
+        // Common integrations/tools to look for
+        $integrationKeywords = [
+            'stripe', 'paypal', 'firebase', 'aws', 'google analytics',
+            'mailchimp', 'sendgrid', 'twilio', 'slack', 'zoom',
+            'shopify', 'woocommerce', 'magento', 'salesforce',
+            'hubspot', 'zapier', 'webhooks', 'oauth', 'jwt',
+            'redis', 'elasticsearch', 'docker', 'kubernetes'
+        ];
+
+        $foundIntegrations = [];
+        foreach ($integrationKeywords as $integration) {
+            if (strpos($description, $integration) !== false) {
+                $foundIntegrations[] = $integration;
+            }
+        }
+
+        return $foundIntegrations;
     }
 
     /**

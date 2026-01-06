@@ -117,7 +117,7 @@
 			"name": "Profile",
 			"item": [
 				{
-					"name": "Get Profile",
+					"name": "Get Profile (Legacy)",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -141,7 +141,7 @@
 					}
 				},
 				{
-					"name": "Update Profile",
+					"name": "Update Profile (Legacy)",
 					"request": {
 						"method": "PUT",
 						"header": [
@@ -173,6 +173,215 @@
 							"path": [
 								"user",
 								"profile",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Current User Profile (v2)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/profile",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"profile"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Current User Profile (v2)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Full Stack Laravel Developer\",\n    \"years_experience\": 5,\n    \"default_tone\": \"professional\",\n    \"writing_style_notes\": \"Concise, human-like, always ask 1 relevant question\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/profile",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"profile"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Profile + Skills Management (v2 - Refined)",
+			"item": [
+				{
+					"name": "Get Complete Profile with Skills",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/profile/complete",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"profile",
+								"complete"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Available Skills for Selection",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/profile/skills/available",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"profile",
+								"skills",
+								"available"
+							]
+						}
+					}
+				},
+				{
+					"name": "Add Multiple Skills to Profile",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skills\": [\n        {\n            \"skill_id\": 1,\n            \"proficiency_level\": \"expert\"\n        },\n        {\n            \"skill_id\": 2,\n            \"proficiency_level\": \"intermediate\"\n        },\n        {\n            \"skill_id\": 3,\n            \"proficiency_level\": \"beginner\"\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/profile/skills",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"profile",
+								"skills"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Skill Proficiency",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"proficiency_level\": \"expert\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/profile/skills/1",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"profile",
+								"skills",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Remove Skill from Profile",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}api/profile/skills/1",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"profile",
+								"skills",
 								"1"
 							]
 						}

@@ -16,7 +16,7 @@ class ClaudeService
     {
         $this->apiKey = config('services.claude.api_key');
         $this->baseUrl = 'https://api.anthropic.com/v1';
-        $this->model = 'claude-3-5-sonnet-20241022'; // Latest Claude model
+        $this->model = 'claude-sonnet-4-20250514'; // Working Claude model name
         $this->temperature = 0.4;
     }
 
@@ -127,9 +127,10 @@ class ClaudeService
     public function getAvailableModels(): array
     {
         return [
-            'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet (Recommended)',
-            'claude-3-5-haiku-20241022' => 'Claude 3.5 Haiku (Faster, Cheaper)',
-            'claude-3-opus-20240229' => 'Claude 3 Opus (Highest Quality)',
+            'claude-sonnet-4-20250514' => 'Claude Sonnet 4 (Latest - Working)',
+            'claude-3-5-sonnet-20240620' => 'Claude 3.5 Sonnet',
+            'claude-3-5-haiku-20241022' => 'Claude 3.5 Haiku (Faster)',
+            'claude-3-opus-20240229' => 'Claude 3 Opus (High Quality)',
         ];
     }
 }

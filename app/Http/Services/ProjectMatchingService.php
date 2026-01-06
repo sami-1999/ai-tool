@@ -37,7 +37,10 @@ class ProjectMatchingService
 
     /**
      * Score projects based on relevance to job
-     * Scoring: Skill match (+10), Industry match (+5), Job type match (+5)
+     * Scoring Rules per v2 specs:
+     * - Skill match: +10
+     * - Integration match: +8
+     * - Industry match: +5
      */
     private function scoreProjects($projects, array $jobAnalysis): array
     {
@@ -45,6 +48,19 @@ class ProjectMatchingService
         
         foreach ($projects as $project) {
             $score = 0;
+            $skillMatches = 0;
+            $integrationMatches = 0;
+            
+            // Load project with relationships
+            $project->load(['skills', 'integrations']);
+            
+            // Skills match (+10 per skill)
+            $skillMatches = $this->countSkillMatches($project, $jobAnalysis['skills']);
+            $score += $skillMatches * 10;
+            
+            // Integration match (+8 per integration)
+            $integrationMatches = $this->countIntegrationMatches($project, $jobAnalysis['integrations'] ?? []);
+            $score += $integrationMatches * 8;
             
             // Industry match (+5)
             if ($project->industry && 
@@ -52,19 +68,12 @@ class ProjectMatchingService
                 $score += 5;
             }
             
-            // Job type relevance (+5)
-            if ($this->isJobTypeRelevant($project, $jobAnalysis['job_type'])) {
-                $score += 5;
-            }
-            
-            // Skills match (+10 per skill)
-            $skillMatches = $this->countSkillMatches($project, $jobAnalysis['skills']);
-            $score += $skillMatches * 10;
-            
             $scoredProjects[] = [
                 'project' => $project,
                 'score' => $score,
-                'skill_matches' => $skillMatches
+                'skill_matches' => $skillMatches,
+                'integration_matches' => $integrationMatches,
+                'industry_match' => ($project->industry && strtolower($project->industry) === strtolower($jobAnalysis['industry']))
             ];
         }
         
@@ -109,13 +118,36 @@ class ProjectMatchingService
      */
     private function countSkillMatches($project, array $jobSkills): int
     {
-        // Get project skills (assuming relationship exists)
+        // Get project skills
         $projectSkills = $project->skills ?? collect();
         $projectSkillNames = $projectSkills->pluck('name')->map('strtolower')->toArray();
         
         $matches = 0;
         foreach ($jobSkills as $skill) {
             if (in_array(strtolower($skill), $projectSkillNames)) {
+                $matches++;
+            }
+        }
+        
+        return $matches;
+    }
+
+    /**
+     * Count integration matches between project and job requirements
+     */
+    private function countIntegrationMatches($project, array $jobIntegrations): int
+    {
+        if (empty($jobIntegrations)) {
+            return 0;
+        }
+
+        // Get project integrations
+        $projectIntegrations = $project->integrations ?? collect();
+        $projectIntegrationNames = $projectIntegrations->pluck('integration_name')->map('strtolower')->toArray();
+        
+        $matches = 0;
+        foreach ($jobIntegrations as $integration) {
+            if (in_array(strtolower($integration), $projectIntegrationNames)) {
                 $matches++;
             }
         }

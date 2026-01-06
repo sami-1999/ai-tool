@@ -9,21 +9,36 @@ class ProjectRepository implements ProjectInterface
 {
     public function store(array $data)
     {
-        return Project::create($data);
+        $skills = $data['skills'] ?? [];
+        unset($data['skills']);
+        
+        $project = Project::create($data);
+        
+        if (!empty($skills)) {
+            $project->skills()->attach($skills);
+        }
+        
+        return $project->load('skills');
     }
 
     public function find(string $id)
     {
-        return Project::findOrFail($id);
+        return Project::with('skills')->findOrFail($id);
     }
 
     public function update(array $data, string $id)
     {
-        $project = $this->find($id);
-        if ($project) {
-            $project->update($data);
+        $skills = $data['skills'] ?? [];
+        unset($data['skills']);
+        
+        $project = Project::findOrFail($id);
+        $project->update($data);
+        
+        if (isset($data['skills']) || !empty($skills)) {
+            $project->skills()->sync($skills);
         }
-        return $project;
+        
+        return $project->load('skills');
     }
 
     public function delete(string $id)
@@ -37,6 +52,6 @@ class ProjectRepository implements ProjectInterface
 
     public function getUserProjects(string $userId)
     {
-        return Project::where('user_id', $userId)->get();
+        return Project::with('skills')->where('user_id', $userId)->get();
     }
 }

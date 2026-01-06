@@ -6,9 +6,12 @@ use App\Http\Repositories\ProposalRepository;
 use App\Http\Repositories\UserProfileRepository;
 use App\Http\Services\JobAnalysisService;
 use App\Http\Services\ProjectMatchingService;
+use App\Http\Services\PromptBuilder;
 use App\Http\Services\OpenAIService;
 use App\Http\Services\ClaudeService;
 use App\Models\ProposalRequest;
+use App\Models\ProposalFeedback;
+use App\Models\SuccessfulProposalPattern;
 use App\Models\UsageLog;
 use Illuminate\Support\Facades\DB;
 
@@ -19,6 +22,7 @@ class ProposalGenerationService
         private UserProfileRepository $userProfileRepo,
         private JobAnalysisService $jobAnalysisService,
         private ProjectMatchingService $projectMatchingService,
+        private PromptBuilder $promptBuilder,
         private OpenAIService $openAIService,
         private ClaudeService $claudeService
     ) {}
@@ -47,8 +51,22 @@ class ProposalGenerationService
             // 4. Match projects or fallback to skills-only
             $matchedData = $this->projectMatchingService->matchProjects($userId, $jobAnalysis);
             
-            // 5. Build prompt with past successful proposals if feedback exists
-            $prompt = $this->buildPrompt($userId, $jobAnalysis, $matchedData, $jobDescription);
+            // 5. Build ethical prompt with PromptBuilder
+            $userProfile = $this->userProfileRepo->find($userId);
+            $userProfileArray = $userProfile ? $userProfile->toArray() : [];
+            
+            // Load user skills if needed
+            if (!isset($userProfileArray['skills'])) {
+                $userProfileArray['skills'] = $this->getUserSkills($userId);
+            }
+            
+            $prompt = $this->promptBuilder->buildEthicalPrompt(
+                $userProfileArray,
+                $jobAnalysis,
+                $matchedData,
+                $jobDescription,
+                $userId
+            );
             
             // 6. Choose AI provider and generate proposal
             $aiResponse = $this->generateWithProvider($prompt, $provider);
@@ -81,24 +99,45 @@ class ProposalGenerationService
         // Default provider from config or fallback
         $provider = $provider ?? config('ai.default_provider', 'claude');
         
+        // Check if any API keys are configured
+        $claudeKey = config('services.claude.api_key');
+        $openaiKey = config('services.openai.api_key');
+        
+        if (!$claudeKey && !$openaiKey) {
+            // Return demo proposal if no API keys configured
+            return $this->generateDemoProposal();
+        }
+        
         switch ($provider) {
             case 'claude':
-                if (!config('services.claude.api_key')) {
+                if (!$claudeKey) {
                     // Fallback to OpenAI if Claude not configured
-                    return $this->openAIService->generateProposal($prompt);
+                    if ($openaiKey) {
+                        return $this->openAIService->generateProposal($prompt);
+                    }
+                    return $this->generateDemoProposal();
                 }
                 return $this->claudeService->generateProposal($prompt);
                 
             case 'openai':
-                if (!config('services.openai.api_key')) {
+                if (!$openaiKey) {
                     // Fallback to Claude if OpenAI not configured
-                    return $this->claudeService->generateProposal($prompt);
+                    if ($claudeKey) {
+                        return $this->claudeService->generateProposal($prompt);
+                    }
+                    return $this->generateDemoProposal();
                 }
                 return $this->openAIService->generateProposal($prompt);
                 
             default:
-                // Default to Claude
-                return $this->claudeService->generateProposal($prompt);
+                // Try Claude first, then OpenAI, then demo
+                if ($claudeKey) {
+                    return $this->claudeService->generateProposal($prompt);
+                } elseif ($openaiKey) {
+                    return $this->openAIService->generateProposal($prompt);
+                } else {
+                    return $this->generateDemoProposal();
+                }
         }
     }
 
@@ -246,5 +285,129 @@ class ProposalGenerationService
             ->get();
         
         return $successfulProposals->toArray();
+    }
+
+    /**
+     * Process feedback and update successful patterns (v2 Learning System)
+     */
+    public function processFeedback(int $proposalId, bool $success, string $userId): void
+    {
+        // Store feedback
+        ProposalFeedback::create([
+            'proposal_id' => $proposalId,
+            'user_id' => $userId,
+            'success' => $success
+        ]);
+
+        // If successful, extract patterns for future learning
+        if ($success) {
+            $this->extractSuccessfulPatterns($proposalId, $userId);
+        }
+    }
+
+    /**
+     * Extract successful patterns from winning proposals
+     */
+    private function extractSuccessfulPatterns(int $proposalId, string $userId): void
+    {
+        $proposal = DB::table('proposals')
+            ->join('proposal_requests', 'proposals.proposal_request_id', '=', 'proposal_requests.id')
+            ->where('proposals.id', $proposalId)
+            ->select('proposals.content', 'proposal_requests.detected_job_type')
+            ->first();
+
+        if ($proposal) {
+            // Simple pattern extraction (can be enhanced with NLP)
+            $tone = $this->detectToneFromContent($proposal->content);
+            $structureNotes = $this->extractStructureNotes($proposal->content);
+
+            SuccessfulProposalPattern::updateOrCreate(
+                [
+                    'user_id' => $userId,
+                    'job_type' => $proposal->detected_job_type
+                ],
+                [
+                    'tone' => $tone,
+                    'structure_notes' => $structureNotes
+                ]
+            );
+        }
+    }
+
+    /**
+     * Detect tone from proposal content
+     */
+    private function detectToneFromContent(string $content): string
+    {
+        $content = strtolower($content);
+        
+        if (strpos($content, 'excited') !== false || strpos($content, 'love') !== false) {
+            return 'enthusiastic';
+        } elseif (strpos($content, 'professional') !== false || strpos($content, 'experience') !== false) {
+            return 'professional';
+        } elseif (strpos($content, 'hi there') !== false || strpos($content, 'hey') !== false) {
+            return 'friendly';
+        }
+        
+        return 'balanced';
+    }
+
+    /**
+     * Extract structure notes from successful proposal
+     */
+    private function extractStructureNotes(string $content): string
+    {
+        $notes = [];
+        
+        // Check for question pattern
+        if (strpos($content, '?') !== false) {
+            $notes[] = 'Ends with engaging question';
+        }
+        
+        // Check for specific experience mention
+        if (preg_match('/\d+\s*(years?|projects?|clients?)/', $content)) {
+            $notes[] = 'Includes specific metrics/experience';
+        }
+        
+        // Check for project reference
+        if (strpos($content, 'project') !== false || strpos($content, 'similar') !== false) {
+            $notes[] = 'References relevant experience';
+        }
+        
+        return implode(', ', $notes);
+    }
+
+    /**
+     * Get user skills for prompt building
+     */
+    private function getUserSkills(string $userId): array
+    {
+        return DB::table('user_skills')
+            ->join('skills', 'user_skills.skill_id', '=', 'skills.id')
+            ->where('user_skills.user_id', $userId)
+            ->select('skills.name', 'user_skills.proficiency_level')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Generate demo proposal when no API keys are configured
+     */
+    private function generateDemoProposal(): array
+    {
+        $demoProposals = [
+            "Hi there! I've been helping businesses create engaging websites for over 3 years, and your project caught my attention. I recently completed a similar e-commerce site that increased conversion rates by 40%. I'd love to understand more about your target audience and specific functionality requirements. Can we schedule a quick call to discuss your vision?",
+            
+            "Hello! Your project aligns perfectly with my expertise in full-stack development. I've delivered 15+ web applications using similar technologies, including a recent project that reduced loading time by 60%. I'm particularly interested in understanding your scalability requirements. What's your expected user growth over the next year?",
+            
+            "Hi! I specialize in creating user-friendly mobile applications and have successfully launched 10+ apps on both iOS and Android. Your project requirements remind me of a recent fintech app I built that now has 50K+ active users. I'd like to discuss your monetization strategy and target demographics. When would be a good time to connect?"
+        ];
+
+        return [
+            'content' => $demoProposals[array_rand($demoProposals)],
+            'tokens_used' => 0,
+            'model_used' => 'demo-generator',
+            'success' => true
+        ];
     }
 }

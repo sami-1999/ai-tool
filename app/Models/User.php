@@ -52,4 +52,54 @@ class User extends Authenticatable
     {
         return $this->hasOne(UserProfile::class);
     }
+
+    /**
+     * User skills relationship
+     */
+    public function userSkills()
+    {
+        return $this->hasMany(UserSkill::class);
+    }
+
+    /**
+     * User skills with skill details
+     */
+    public function skills()
+    {
+        return $this->belongsToMany(Skill::class, 'user_skills')
+                    ->withPivot('proficiency_level')
+                    ->withTimestamps();
+    }
+
+    /**
+     * User projects
+     */
+    public function projects()
+    {
+        return $this->hasMany(Project::class);
+    }
+
+    /**
+     * Proposal requests
+     */
+    public function proposalRequests()
+    {
+        return $this->hasMany(ProposalRequest::class);
+    }
+
+    /**
+     * Successful proposal patterns
+     */
+    public function successfulProposalPatterns()
+    {
+        return $this->hasMany(SuccessfulProposalPattern::class);
+    }
+
+    /**
+     * Usage logs
+     */
+    public function usageLogs()
+    {
+        return $this->hasMany(UsageLog::class);
+    }
 }
