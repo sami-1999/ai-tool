@@ -15,8 +15,8 @@ class AuthService
 
     public function register($request)
     {
-
         $user = $this->userRepo->create($request);
+        // User profile will be auto-created by UserObserver
 
         $token = $user->createToken('auth')->accessToken;
 
@@ -45,3 +45,4 @@ class AuthService
         $user->currentAccessToken()->revoke();
     }
 }
+
