@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ProposalController;
 use App\Http\Controllers\API\SkillController;
 use App\Http\Controllers\API\TestController;
 use App\Http\Controllers\API\UserProfileController;
+use App\Http\Controllers\API\UserSkillController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -50,15 +51,9 @@ Route::middleware('auth:api')->group(function () {
         });
     });
 
-    // Legacy skills endpoints (still available via SkillController)
-    Route::prefix('user-skills')->controller(SkillController::class)->group(function () {
-        Route::get('/', 'getUserSkills');
-        Route::post('/', 'storeUserSkill');
-        Route::delete('/{skillId}', 'removeUserSkill');
-    });
-
     Route::apiResource('skill', SkillController::class);
     Route::apiResource('project', ProjectController::class);
+    Route::apiResource('user-skills', UserSkillController::class)->only(['index', 'store', 'destroy'])->parameters(['user-skills' => 'skillId']);
     
     Route::prefix('proposals')->controller(ProposalController::class)->group(function () {
         Route::get('/', 'index');

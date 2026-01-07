@@ -57,14 +57,35 @@ class UserProfileController extends Controller
             'title' => 'sometimes|string|max:255',
             'years_experience' => 'sometimes|integer|min:0|max:50',
             'default_tone' => 'sometimes|string|in:professional,friendly,enthusiastic,formal',
-            'writing_style_notes' => 'sometimes|string|max:1000'
+            'writing_style_notes' => 'sometimes|string|max:1000',
+            'birthday' => 'sometimes|date',
+            'bio' => 'sometimes|string|max:5000',
+            'country' => 'sometimes|string|max:255',
+            'city' => 'sometimes|string|max:255',
+            'address' => 'sometimes|string|max:500',
+            'portfolio_site_link' => 'sometimes|url|max:255',
+            'github_link' => 'sometimes|url|max:255',
+            'linkedin_link' => 'sometimes|url|max:255'
         ]);
 
         $userId = Auth::id();
         
         $profile = UserProfileModel::updateOrCreate(
             ['user_id' => $userId],
-            $request->only(['title', 'years_experience', 'default_tone', 'writing_style_notes'])
+            $request->only([
+                'title', 
+                'years_experience', 
+                'default_tone', 
+                'writing_style_notes',
+                'birthday',
+                'bio',
+                'country',
+                'city',
+                'address',
+                'portfolio_site_link',
+                'github_link',
+                'linkedin_link'
+            ])
         );
 
         return ApiResponse::success($profile, 'User profile updated successfully');
