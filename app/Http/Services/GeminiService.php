@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 
 class GeminiService
 {
-    private string $apiKey;
+    private ?string $apiKey;
     private string $baseUrl;
     private string $model;
     private float $temperature;
@@ -28,6 +28,17 @@ class GeminiService
      */
     public function generateProposal(string $prompt): array
     {
+        // Check if API key is configured
+        if (empty($this->apiKey)) {
+            return [
+                'content' => null,
+                'tokens_used' => 0,
+                'model_used' => $this->model,
+                'success' => false,
+                'error' => 'Gemini API key not configured'
+            ];
+        }
+
         try {
             $endpoint = "{$this->baseUrl}/models/{$this->model}:generateContent?key={$this->apiKey}";
             
