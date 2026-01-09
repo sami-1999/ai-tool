@@ -26,7 +26,7 @@ class ProposalGenerateRequest extends FormRequest
     {
         return [
             'job_description' => 'required|string|min:50',
-            'provider' => 'nullable|string|in:openai,claude',
+            'provider' => 'nullable|string|in:openai,claude,gemini',
         ];
     }
 

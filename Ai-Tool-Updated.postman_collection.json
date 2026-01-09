@@ -1,14 +1,14 @@
 {
 	"info": {
 		"_postman_id": "74a812e8-a8dd-4806-ab4b-8c6c7a8753b2",
-		"name": "AI Proposal Generator - Complete Collection",
-		"description": "Complete API collection for AI Proposal Generator with Claude & OpenAI support",
+		"name": "AI Proposal Generator API",
+		"description": "Complete API collection for AI Proposal Generator with authentication, user profiles, skills, projects, and proposals",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "47812198"
 	},
 	"item": [
 		{
-			"name": "Auth",
+			"name": "Authentication",
 			"item": [
 				{
 					"name": "Register",
@@ -17,6 +17,11 @@
 						"header": [
 							{
 								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
 								"value": "application/json",
 								"type": "text"
 							}
@@ -65,6 +70,11 @@
 						"header": [
 							{
 								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
 								"value": "application/json",
 								"type": "text"
 							}
@@ -186,10 +196,10 @@
 			]
 		},
 		{
-			"name": "Profile",
+			"name": "User Profile",
 			"item": [
 				{
-					"name": "Get Profile (Legacy)",
+					"name": "Get User Profile",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -213,7 +223,7 @@
 					}
 				},
 				{
-					"name": "Update Profile (Legacy)",
+					"name": "Update User Profile",
 					"request": {
 						"method": "PUT",
 						"header": [
@@ -249,223 +259,14 @@
 							]
 						}
 					}
-				},
-				{
-					"name": "Get Current User Profile (v2)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseURL}}api/profile",
-							"host": [
-								"{{baseURL}}api"
-							],
-							"path": [
-								"profile"
-							]
-						}
-					}
-				},
-				{
-					"name": "Update Current User Profile (v2)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"title\": \"Full Stack Laravel Developer\",\n    \"years_experience\": 5,\n    \"default_tone\": \"professional\",\n    \"writing_style_notes\": \"Concise, human-like, always ask 1 relevant question\",\n    \"birthday\": \"1995-05-15\",\n    \"bio\": \"Experienced Laravel developer with a passion for building scalable web applications\",\n    \"country\": \"United States\",\n    \"city\": \"New York\",\n    \"address\": \"123 Main Street, Apartment 4B\",\n    \"portfolio_site_link\": \"https://myportfolio.com\",\n    \"github_link\": \"https://github.com/username\",\n    \"linkedin_link\": \"https://linkedin.com/in/username\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseURL}}api/profile",
-							"host": [
-								"{{baseURL}}api"
-							],
-							"path": [
-								"profile"
-							]
-						}
-					}
 				}
 			]
 		},
 		{
-			"name": "Profile + Skills Management (v2 - Refined)",
+			"name": "Skills",
 			"item": [
 				{
-					"name": "Get Complete Profile with Skills",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseURL}}api/profile/complete",
-							"host": [
-								"{{baseURL}}api"
-							],
-							"path": [
-								"profile",
-								"complete"
-							]
-						}
-					}
-				},
-				{
-					"name": "Get Available Skills for Selection",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseURL}}api/profile/skills/available",
-							"host": [
-								"{{baseURL}}api"
-							],
-							"path": [
-								"profile",
-								"skills",
-								"available"
-							]
-						}
-					}
-				},
-				{
-					"name": "Add Multiple Skills to Profile",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"skills\": [\n        {\n            \"skill_id\": 1,\n            \"proficiency_level\": \"expert\"\n        },\n        {\n            \"skill_id\": 2,\n            \"proficiency_level\": \"intermediate\"\n        },\n        {\n            \"skill_id\": 3,\n            \"proficiency_level\": \"beginner\"\n        }\n    ]\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseURL}}api/profile/skills",
-							"host": [
-								"{{baseURL}}api"
-							],
-							"path": [
-								"profile",
-								"skills"
-							]
-						}
-					}
-				},
-				{
-					"name": "Update Skill Proficiency",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"proficiency_level\": \"expert\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseURL}}api/profile/skills/1",
-							"host": [
-								"{{baseURL}}api"
-							],
-							"path": [
-								"profile",
-								"skills",
-								"1"
-							]
-						}
-					}
-				},
-				{
-					"name": "Remove Skill from Profile",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseURL}}api/profile/skills/1",
-							"host": [
-								"{{baseURL}}api"
-							],
-							"path": [
-								"profile",
-								"skills",
-								"1"
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "Skills (Master)",
-			"item": [
-				{
-					"name": "List Skills",
+					"name": "List All Skills",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -523,7 +324,7 @@
 					}
 				},
 				{
-					"name": "Get Skill",
+					"name": "Get Single Skill",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -633,7 +434,7 @@
 					}
 				},
 				{
-					"name": "Add User Skill (Single)",
+					"name": "Add User Skill (By ID)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -665,11 +466,86 @@
 							"path": [
 								"user-skills"
 							]
-						}
+						},
+						"description": "Add an existing skill to user profile by skill_id"
 					}
 				},
 				{
-					"name": "Add User Skills (Multiple)",
+					"name": "Add User Skill (By Name - Create New)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skill_name\": \"Tailwind CSS\",\n    \"proficiency_level\": \"intermediate\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/user-skills",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"user-skills"
+							]
+						},
+						"description": "Create a new skill inline and add to user profile. If skill already exists, it will be reused."
+					}
+				},
+				{
+					"name": "Add User Skills (Bulk - Mixed)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skills\": [\n        {\n            \"skill_id\": 1,\n            \"proficiency_level\": \"expert\"\n        },\n        {\n            \"skill_name\": \"React Native\",\n            \"proficiency_level\": \"intermediate\"\n        },\n        {\n            \"skill_name\": \"Docker\",\n            \"proficiency_level\": \"beginner\"\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/user-skills",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"user-skills"
+							]
+						},
+						"description": "Add multiple skills at once using a mix of skill_id (existing) and skill_name (new/existing)"
+					}
+				},
+				{
+					"name": "Add User Skills (Bulk - All By ID)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -701,11 +577,49 @@
 							"path": [
 								"user-skills"
 							]
-						}
+						},
+						"description": "Add multiple existing skills by their IDs"
 					}
 				},
 				{
-					"name": "Remove User Skill",
+					"name": "Add User Skills (Bulk - All By Name)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skills\": [\n        {\n            \"skill_name\": \"Next.js\",\n            \"proficiency_level\": \"expert\"\n        },\n        {\n            \"skill_name\": \"GraphQL\",\n            \"proficiency_level\": \"intermediate\"\n        },\n        {\n            \"skill_name\": \"MongoDB\",\n            \"proficiency_level\": \"beginner\"\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/user-skills",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"user-skills"
+							]
+						},
+						"description": "Create multiple new skills inline or reuse existing ones by name"
+					}
+				},
+				{
+					"name": "Delete User Skill",
 					"request": {
 						"method": "DELETE",
 						"header": [
@@ -723,8 +637,17 @@
 							"path": [
 								"user-skills",
 								"1"
+							],
+							"query": [
+								{
+									"key": "skill_id",
+									"value": "1",
+									"description": "Skill ID to remove",
+									"disabled": true
+								}
 							]
-						}
+						},
+						"description": "Remove a skill from user's profile"
 					}
 				}
 			]
@@ -733,7 +656,7 @@
 			"name": "Projects",
 			"item": [
 				{
-					"name": "List Projects",
+					"name": "List User Projects",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -791,7 +714,7 @@
 					}
 				},
 				{
-					"name": "Get Project",
+					"name": "Get Single Project",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -831,7 +754,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"title\": \"Advanced E-commerce Laravel Platform\",\n    \"description\": \"Updated description with more details...\",\n    \"skills\": [1, 2, 3, 4]\n}",
+							"raw": "{\n    \"title\": \"Advanced E-commerce Laravel Platform\",\n    \"description\": \"Updated description with more details about the project implementation and architecture\",\n    \"industry\": \"ecommerce\",\n    \"challenges\": \"Complex payment gateway integration and performance optimization for high traffic\",\n    \"outcome\": \"Successfully delivered on time, handled 10K+ concurrent users, 40% increase in client revenue\",\n    \"skills\": [1, 2, 3, 4]\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -901,7 +824,7 @@
 					}
 				},
 				{
-					"name": "Generate Proposal (Default Provider)",
+					"name": "Generate Proposal (Default)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -1012,7 +935,45 @@
 					}
 				},
 				{
-					"name": "Get Proposal",
+					"name": "Generate Proposal (Gemini)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"job_description\": \"Need a full-stack developer to build a modern SaaS application. Tech stack: Laravel backend, Vue.js frontend, MySQL database, Redis caching, AWS deployment. Features include user authentication, subscription billing, real-time notifications, analytics dashboard, and API integrations. Looking for someone who can deliver clean, scalable code with proper testing. Timeline: 6-8 weeks.\",\n    \"provider\": \"gemini\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}api/proposals/generate",
+							"host": [
+								"{{baseURL}}api"
+							],
+							"path": [
+								"proposals",
+								"generate"
+							]
+						},
+						"description": "Generate proposal using Google's Gemini AI (Default provider - fast and cost-effective)"
+					}
+				},
+				{
+					"name": "Get Single Proposal",
 					"request": {
 						"method": "GET",
 						"header": [
@@ -1106,168 +1067,6 @@
 								"proposals",
 								"1",
 								"feedback"
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "AI Testing",
-			"item": [
-				{
-					"name": "Test OpenAI Connection",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseURL}}api/test/openai",
-							"host": [
-								"{{baseURL}}api"
-							],
-							"path": [
-								"test",
-								"openai"
-							]
-						}
-					}
-				},
-				{
-					"name": "Test Claude Connection",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseURL}}api/test/claude",
-							"host": [
-								"{{baseURL}}api"
-							],
-							"path": [
-								"test",
-								"claude"
-							]
-						}
-					}
-				},
-				{
-					"name": "Test OpenAI Proposal Generation",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"job_description\": \"Looking for a Laravel developer to build a simple API for managing tasks. Need someone with PHP, Laravel, and database experience.\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseURL}}api/test/proposal-generation",
-							"host": [
-								"{{baseURL}}api"
-							],
-							"path": [
-								"test",
-								"proposal-generation"
-							]
-						}
-					}
-				},
-				{
-					"name": "Test Claude Proposal Generation",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"job_description\": \"Looking for a Laravel developer to build a simple API for managing tasks. Need someone with PHP, Laravel, and database experience.\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseURL}}api/test/claude-proposal-generation",
-							"host": [
-								"{{baseURL}}api"
-							],
-							"path": [
-								"test",
-								"claude-proposal-generation"
-							]
-						}
-					}
-				},
-				{
-					"name": "Compare AI Providers",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"prompt\": \"Generate a professional Upwork proposal for a Laravel development project. Keep it under 100 words and ask one relevant question.\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{baseURL}}api/test/compare-providers",
-							"host": [
-								"{{baseURL}}api"
-							],
-							"path": [
-								"test",
-								"compare-providers"
 							]
 						}
 					}

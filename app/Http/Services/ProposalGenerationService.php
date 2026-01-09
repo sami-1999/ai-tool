@@ -9,6 +9,7 @@ use App\Http\Services\ProjectMatchingService;
 use App\Http\Services\PromptBuilder;
 use App\Http\Services\OpenAIService;
 use App\Http\Services\ClaudeService;
+use App\Http\Services\GeminiService;
 use App\Models\ProposalRequest;
 use App\Models\ProposalFeedback;
 use App\Models\SuccessfulProposalPattern;
@@ -24,7 +25,8 @@ class ProposalGenerationService
         private ProjectMatchingService $projectMatchingService,
         private PromptBuilder $promptBuilder,
         private OpenAIService $openAIService,
-        private ClaudeService $claudeService
+        private ClaudeService $claudeService,
+        private GeminiService $geminiService
     ) {}
 
     /**
@@ -97,22 +99,37 @@ class ProposalGenerationService
     private function generateWithProvider(string $prompt, string $provider = null): array
     {
         // Default provider from config or fallback
-        $provider = $provider ?? config('ai.default_provider', 'claude');
+        $provider = $provider ?? config('ai.default_provider', 'gemini');
         
         // Check if any API keys are configured
         $claudeKey = config('services.claude.api_key');
         $openaiKey = config('services.openai.api_key');
+        $geminiKey = config('services.gemini.api_key');
         
-        if (!$claudeKey && !$openaiKey) {
+        if (!$claudeKey && !$openaiKey && !$geminiKey) {
             // Return demo proposal if no API keys configured
             return $this->generateDemoProposal();
         }
         
         switch ($provider) {
+            case 'gemini':
+                if (!$geminiKey) {
+                    // Fallback to Claude then OpenAI if Gemini not configured
+                    if ($claudeKey) {
+                        return $this->claudeService->generateProposal($prompt);
+                    } elseif ($openaiKey) {
+                        return $this->openAIService->generateProposal($prompt);
+                    }
+                    return $this->generateDemoProposal();
+                }
+                return $this->geminiService->generateProposal($prompt);
+                
             case 'claude':
                 if (!$claudeKey) {
-                    // Fallback to OpenAI if Claude not configured
-                    if ($openaiKey) {
+                    // Fallback to Gemini then OpenAI if Claude not configured
+                    if ($geminiKey) {
+                        return $this->geminiService->generateProposal($prompt);
+                    } elseif ($openaiKey) {
                         return $this->openAIService->generateProposal($prompt);
                     }
                     return $this->generateDemoProposal();
@@ -121,8 +138,10 @@ class ProposalGenerationService
                 
             case 'openai':
                 if (!$openaiKey) {
-                    // Fallback to Claude if OpenAI not configured
-                    if ($claudeKey) {
+                    // Fallback to Gemini then Claude if OpenAI not configured
+                    if ($geminiKey) {
+                        return $this->geminiService->generateProposal($prompt);
+                    } elseif ($claudeKey) {
                         return $this->claudeService->generateProposal($prompt);
                     }
                     return $this->generateDemoProposal();
@@ -130,8 +149,10 @@ class ProposalGenerationService
                 return $this->openAIService->generateProposal($prompt);
                 
             default:
-                // Try Claude first, then OpenAI, then demo
-                if ($claudeKey) {
+                // Try Gemini first, then Claude, then OpenAI, then demo
+                if ($geminiKey) {
+                    return $this->geminiService->generateProposal($prompt);
+                } elseif ($claudeKey) {
                     return $this->claudeService->generateProposal($prompt);
                 } elseif ($openaiKey) {
                     return $this->openAIService->generateProposal($prompt);

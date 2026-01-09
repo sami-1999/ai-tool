@@ -43,4 +43,8 @@ return [
         'api_key' => env('CLAUDE_API_KEY'),
     ],
 
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+    ],
+
 ];
