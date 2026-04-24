@@ -25,29 +25,16 @@ class UserProfileStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Required basic fields
             'title'                => 'required|string|max:255',
-            'years_experience'     => 'required|integer|min:0|max:100',
-            
-            // Tone and style fields
-            'default_tone'         => 'nullable|string|in:professional,casual,creative,formal,friendly',
-            'writing_style_notes'  => 'nullable|string|max:2000',
-            
-            // Personal information
+            'years_experience'     => 'required|integer|min:0|max:50',
             'birthday'             => 'nullable|date|before:today',
-            'bio'                  => 'nullable|string|max:1000',
-            
-            // Address information
+            'bio'                  => 'nullable|string|max:5000',
             'country'              => 'nullable|string|max:255',
             'city'                 => 'nullable|string|max:255',
             'address'              => 'nullable|string|max:500',
-            
-            // Professional links
             'portfolio_site_link'  => 'nullable|url|max:255',
-            'github_link'          => 'nullable|url|max:255',
             'linkedin_link'        => 'nullable|url|max:255',
-            
-            // System field
+            'github_link'          => 'nullable|url|max:255',
             'user_id'              => 'nullable|exists:users,id',
         ];
     }
@@ -58,21 +45,23 @@ class UserProfileStoreRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'title.required' => 'Professional title is required',
-            'years_experience.required' => 'Years of experience is required',
-            'years_experience.min' => 'Years of experience cannot be negative',
-            'years_experience.max' => 'Years of experience seems too high',
+            'title.required' => 'Professional Title is required',
+            'title.max' => 'Professional Title cannot exceed 255 characters',
+            'years_experience.required' => 'Years of Experience is required',
+            'years_experience.min' => 'Years of Experience cannot be negative',
+            'years_experience.max' => 'Years of Experience cannot exceed 50 years',
             'birthday.before' => 'Birthday must be a date before today',
-            'bio.max' => 'Bio cannot exceed 1000 characters',
-            'portfolio_site_link.url' => 'Portfolio site must be a valid URL',
+            'birthday.date' => 'Birthday must be a valid date',
+            'bio.max' => 'Professional Bio cannot exceed 5000 characters',
+            'country.max' => 'Country cannot exceed 255 characters',
+            'city.max' => 'City cannot exceed 255 characters',
+            'address.max' => 'Full Address cannot exceed 500 characters',
+            'portfolio_site_link.url' => 'Portfolio Website must be a valid URL',
+            'portfolio_site_link.max' => 'Portfolio Website cannot exceed 255 characters',
+            'linkedin_link.url' => 'LinkedIn Profile must be a valid URL',
+            'linkedin_link.max' => 'LinkedIn Profile cannot exceed 255 characters',
             'github_link.url' => 'GitHub link must be a valid URL',
-            'linkedin_link.url' => 'LinkedIn link must be a valid URL',
-            'hourly_rate.min' => 'Hourly rate cannot be negative',
-            'hourly_rate.max' => 'Hourly rate seems too high',
-            'achievements.max' => 'Achievements section cannot exceed 2000 characters',
-            'default_tone.in' => 'Default tone must be one of: professional, casual, creative, formal, friendly',
-            'communication_style.in' => 'Communication style must be one of: formal, casual, friendly, professional, technical',
-            'availability.in' => 'Availability must be one of: full-time, part-time, contract, freelance, not-available',
+            'github_link.max' => 'GitHub link cannot exceed 255 characters',
         ];
     }
     /**

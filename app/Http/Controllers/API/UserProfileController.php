@@ -56,8 +56,6 @@ class UserProfileController extends Controller
         $request->validate([
             'title' => 'sometimes|string|max:255',
             'years_experience' => 'sometimes|integer|min:0|max:50',
-            'default_tone' => 'sometimes|string|in:professional,friendly,enthusiastic,formal',
-            'writing_style_notes' => 'sometimes|string|max:1000',
             'birthday' => 'sometimes|date',
             'bio' => 'sometimes|string|max:5000',
             'country' => 'sometimes|string|max:255',
@@ -75,8 +73,6 @@ class UserProfileController extends Controller
             $request->only([
                 'title', 
                 'years_experience', 
-                'default_tone', 
-                'writing_style_notes',
                 'birthday',
                 'bio',
                 'country',

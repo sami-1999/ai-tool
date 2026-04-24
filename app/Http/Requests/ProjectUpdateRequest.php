@@ -27,9 +27,6 @@ class ProjectUpdateRequest extends FormRequest
         return [
             'title'       => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
-            'industry'    => 'nullable|string|max:255',
-            'challenges'  => 'nullable|string',
-            'outcome'     => 'nullable|string',
             'skills'      => 'nullable|array',
             'skills.*'    => 'exists:skills,id',
         ];

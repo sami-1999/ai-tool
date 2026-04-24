@@ -27,9 +27,6 @@ class ProjectStoreRequest extends FormRequest
         return [
             'title'       => 'required|string|max:255',
             'description' => 'required|string',
-            'industry'    => 'nullable|string|max:255',
-            'challenges'  => 'nullable|string',
-            'outcome'     => 'nullable|string',
             'skills'      => 'nullable|array',
             'skills.*'    => 'exists:skills,id',
         ];
