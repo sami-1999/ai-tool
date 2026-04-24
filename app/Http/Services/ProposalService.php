@@ -16,10 +16,10 @@ class ProposalService
         private ProposalGenerationService $proposalGenerationService
     ) {}
 
-    public function generateProposal(string $userId, string $jobDescription, string $provider = null)
+    public function generateProposal(string $userId, array $payload, string $provider = null)
     {
         // This will orchestrate the entire proposal generation flow
-        return $this->proposalGenerationService->generate($userId, $jobDescription, $provider);
+        return $this->proposalGenerationService->generate($userId, $payload, $provider);
     }
 
     public function getUserProposals(string $userId)

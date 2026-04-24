@@ -15,9 +15,13 @@ class PromptBuilder
         array $jobAnalysis,
         array $matchedData,
         string $jobDescription,
-        string $userId
+        string $userId,
+        array $jobContext = [],
+        array $riskAssessment = []
     ): string {
         $prompt = "Generate a personalized Upwork proposal based on the following:\n\n";
+
+        $prompt .= $this->buildClientContextSection($jobContext, $riskAssessment);
         
         // Freelancer Background Section
         $prompt .= $this->buildFreelancerBackground($userProfile, $matchedData);
@@ -35,6 +39,41 @@ class PromptBuilder
         $prompt .= $this->buildJobDescriptionSection($jobDescription);
         
         return $prompt;
+    }
+
+    private function buildClientContextSection(array $jobContext, array $riskAssessment): string
+    {
+        if (empty($jobContext) && empty($riskAssessment)) {
+            return '';
+        }
+
+        $section = "CLIENT & JOB CONTEXT:\n";
+
+        if (!empty($jobContext['client_name'])) {
+            $section .= "- Client Name: {$jobContext['client_name']}\n";
+        }
+        if (isset($jobContext['client_rating']) && $jobContext['client_rating'] !== null) {
+            $section .= "- Client Rating: {$jobContext['client_rating']}/5\n";
+        }
+        if (!empty($jobContext['client_spending'])) {
+            $section .= "- Client Spending: {$jobContext['client_spending']}\n";
+        }
+        if (!empty($jobContext['job_type'])) {
+            $section .= "- Job Type: {$jobContext['job_type']}\n";
+        }
+        if (!empty($jobContext['budget'])) {
+            $section .= "- Budget: {$jobContext['budget']}\n";
+        }
+
+        if (!empty($riskAssessment)) {
+            $section .= "- Job Authenticity Risk: " . strtoupper($riskAssessment['risk_level'] ?? 'medium') . "\n";
+            if (!empty($riskAssessment['reasoning'])) {
+                $section .= "- Risk Notes: {$riskAssessment['reasoning']}\n";
+            }
+            $section .= "- Apply Recommendation: " . (($riskAssessment['should_apply'] ?? false) ? 'APPLY' : 'DO NOT APPLY (unless user forces generation)') . "\n";
+        }
+
+        return $section . "\n";
     }
 
     /**

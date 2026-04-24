@@ -10,6 +10,7 @@ use App\Http\Services\PromptBuilder;
 use App\Http\Services\OpenAIService;
 use App\Http\Services\ClaudeService;
 use App\Http\Services\GeminiService;
+use App\Http\Services\GroqService;
 use App\Models\ProposalRequest;
 use App\Models\ProposalFeedback;
 use App\Models\SuccessfulProposalPattern;
@@ -26,29 +27,55 @@ class ProposalGenerationService
         private PromptBuilder $promptBuilder,
         private OpenAIService $openAIService,
         private ClaudeService $claudeService,
-        private GeminiService $geminiService
+        private GeminiService $geminiService,
+        private GroqService $groqService
     ) {}
 
     /**
      * Main proposal generation orchestrator
      * 
      * @param string $userId
-     * @param string $jobDescription
+     * @param array $payload
      * @param string $provider
      * @return array
      */
-    public function generate(string $userId, string $jobDescription, string $provider = null): array
+    public function generate(string $userId, array $payload, string $provider = null): array
     {
-        return DB::transaction(function () use ($userId, $jobDescription, $provider) {
+        return DB::transaction(function () use ($userId, $payload, $provider) {
+            $jobDescription = $payload['job_description'];
+            $jobContext = $this->extractJobContext($payload);
+            $forceGenerate = (bool)($payload['force_generate'] ?? false);
             
             // 1. Validate usage limits
             $this->validateUsageLimits($userId);
             
             // 2. Analyze job description
             $jobAnalysis = $this->jobAnalysisService->analyze($jobDescription);
+
+            // 2.1 Assess job authenticity and apply recommendation
+            $riskAssessment = $this->assessJobAuthenticity($jobDescription, $jobContext);
             
             // 3. Store proposal request
-            $proposalRequest = $this->storeProposalRequest($userId, $jobDescription, $jobAnalysis);
+            $proposalRequest = $this->storeProposalRequest($userId, $jobDescription, $jobAnalysis, $jobContext, $riskAssessment);
+
+            // 3.1 Return early if AI recommends not applying and generation not forced
+            if (!$riskAssessment['should_apply'] && !$forceGenerate) {
+                $this->logUsage($userId, 'proposal_generation');
+
+                return [
+                    'proposal_generated' => false,
+                    'risk_assessment' => $riskAssessment,
+                    'apply_recommendation' => [
+                        'should_apply' => false,
+                        'message' => 'This job appears risky. Proposal generation skipped by default. You can set force_generate=true to generate anyway.'
+                    ],
+                    'job_analysis' => $jobAnalysis,
+                    'matched_projects' => [],
+                    'proposal' => null,
+                    'tokens_used' => 0,
+                    'provider_used' => null
+                ];
+            }
             
             // 4. Match projects or fallback to skills-only
             $matchedData = $this->projectMatchingService->matchProjects($userId, $jobAnalysis);
@@ -67,7 +94,9 @@ class ProposalGenerationService
                 $jobAnalysis,
                 $matchedData,
                 $jobDescription,
-                $userId
+                $userId,
+                $jobContext,
+                $riskAssessment
             );
             
             // 6. Choose AI provider and generate proposal
@@ -84,7 +113,15 @@ class ProposalGenerationService
             $this->logUsage($userId, 'proposal_generation');
             
             return [
+                'proposal_generated' => true,
                 'proposal' => $proposal,
+                'risk_assessment' => $riskAssessment,
+                'apply_recommendation' => [
+                    'should_apply' => $riskAssessment['should_apply'],
+                    'message' => $riskAssessment['should_apply']
+                        ? 'This job looks reasonably authentic. Applying is recommended.'
+                        : 'Job looks risky, but proposal generated because force_generate=true.'
+                ],
                 'job_analysis' => $jobAnalysis,
                 'matched_projects' => $matchedData,
                 'tokens_used' => $aiResponse['tokens_used'],
@@ -99,23 +136,40 @@ class ProposalGenerationService
     private function generateWithProvider(string $prompt, string $provider = null): array
     {
         // Default provider from config or fallback
-        $provider = $provider ?? config('ai.default_provider', 'gemini');
+        $provider = $provider ?? config('ai.default_provider', 'groq');
         
         // Check if any API keys are configured
         $claudeKey = config('services.claude.api_key');
         $openaiKey = config('services.openai.api_key');
         $geminiKey = config('services.gemini.api_key');
+        $groqKey = config('services.groq.api_key');
         
-        if (!$claudeKey && !$openaiKey && !$geminiKey) {
+        if (!$claudeKey && !$openaiKey && !$geminiKey && !$groqKey) {
             // Return demo proposal if no API keys configured
             return $this->generateDemoProposal();
         }
         
         switch ($provider) {
+            case 'groq':
+                if (!$groqKey) {
+                    // Fallback to Gemini then Claude then OpenAI if Groq not configured
+                    if ($geminiKey) {
+                        return $this->geminiService->generateProposal($prompt);
+                    } elseif ($claudeKey) {
+                        return $this->claudeService->generateProposal($prompt);
+                    } elseif ($openaiKey) {
+                        return $this->openAIService->generateProposal($prompt);
+                    }
+                    return $this->generateDemoProposal();
+                }
+                return $this->groqService->generateProposal($prompt);
+
             case 'gemini':
                 if (!$geminiKey) {
-                    // Fallback to Claude then OpenAI if Gemini not configured
-                    if ($claudeKey) {
+                    // Fallback to Groq then Claude then OpenAI if Gemini not configured
+                    if ($groqKey) {
+                        return $this->groqService->generateProposal($prompt);
+                    } elseif ($claudeKey) {
                         return $this->claudeService->generateProposal($prompt);
                     } elseif ($openaiKey) {
                         return $this->openAIService->generateProposal($prompt);
@@ -126,8 +180,10 @@ class ProposalGenerationService
                 
             case 'claude':
                 if (!$claudeKey) {
-                    // Fallback to Gemini then OpenAI if Claude not configured
-                    if ($geminiKey) {
+                    // Fallback to Groq then Gemini then OpenAI if Claude not configured
+                    if ($groqKey) {
+                        return $this->groqService->generateProposal($prompt);
+                    } elseif ($geminiKey) {
                         return $this->geminiService->generateProposal($prompt);
                     } elseif ($openaiKey) {
                         return $this->openAIService->generateProposal($prompt);
@@ -138,8 +194,10 @@ class ProposalGenerationService
                 
             case 'openai':
                 if (!$openaiKey) {
-                    // Fallback to Gemini then Claude if OpenAI not configured
-                    if ($geminiKey) {
+                    // Fallback to Groq then Gemini then Claude if OpenAI not configured
+                    if ($groqKey) {
+                        return $this->groqService->generateProposal($prompt);
+                    } elseif ($geminiKey) {
                         return $this->geminiService->generateProposal($prompt);
                     } elseif ($claudeKey) {
                         return $this->claudeService->generateProposal($prompt);
@@ -149,8 +207,10 @@ class ProposalGenerationService
                 return $this->openAIService->generateProposal($prompt);
                 
             default:
-                // Try Gemini first, then Claude, then OpenAI, then demo
-                if ($geminiKey) {
+                // Try Groq first, then Gemini, then Claude, then OpenAI, then demo
+                if ($groqKey) {
+                    return $this->groqService->generateProposal($prompt);
+                } elseif ($geminiKey) {
                     return $this->geminiService->generateProposal($prompt);
                 } elseif ($claudeKey) {
                     return $this->claudeService->generateProposal($prompt);
@@ -244,13 +304,124 @@ class ProposalGenerationService
     /**
      * Store proposal request
      */
-    private function storeProposalRequest(string $userId, string $jobDescription, array $jobAnalysis)
+    private function storeProposalRequest(
+        string $userId,
+        string $jobDescription,
+        array $jobAnalysis,
+        array $jobContext = [],
+        array $riskAssessment = []
+    )
     {
         return ProposalRequest::create([
             'user_id' => $userId,
             'job_description' => $jobDescription,
-            'detected_job_type' => $jobAnalysis['job_type']
+            'detected_job_type' => $jobAnalysis['job_type'],
+            'client_name' => $jobContext['client_name'] ?? null,
+            'client_rating' => $jobContext['client_rating'] ?? null,
+            'client_spending' => $jobContext['client_spending'] ?? null,
+            'posted_job_type' => $jobContext['job_type'] ?? null,
+            'budget' => $jobContext['budget'] ?? null,
+            'risk_level' => $riskAssessment['risk_level'] ?? null,
+            'should_apply' => $riskAssessment['should_apply'] ?? true,
+            'risk_reasoning' => $riskAssessment['reasoning'] ?? null,
+            'risk_score' => $riskAssessment['score'] ?? 0,
         ]);
+    }
+
+    private function extractJobContext(array $payload): array
+    {
+        return [
+            'client_name' => $payload['client_name'] ?? null,
+            'client_rating' => isset($payload['client_rating']) ? (float)$payload['client_rating'] : null,
+            'client_spending' => $payload['client_spending'] ?? null,
+            'job_type' => $payload['job_type'] ?? null,
+            'budget' => $payload['budget'] ?? null,
+        ];
+    }
+
+    private function assessJobAuthenticity(string $jobDescription, array $jobContext): array
+    {
+        $score = 0;
+        $reasons = [];
+
+        $rating = $jobContext['client_rating'] ?? null;
+        if ($rating !== null) {
+            if ($rating >= 4.5) {
+                $score += 2;
+                $reasons[] = 'Client rating is strong';
+            } elseif ($rating < 3) {
+                $score -= 2;
+                $reasons[] = 'Client rating is low';
+            }
+        } else {
+            $reasons[] = 'Client rating not provided';
+        }
+
+        $spending = strtolower((string)($jobContext['client_spending'] ?? ''));
+        if ($spending !== '') {
+            if (preg_match('/\$?([0-9]+(?:\.[0-9]+)?)(k)?/', $spending, $matches)) {
+                $amount = (float)$matches[1];
+                if (!empty($matches[2])) {
+                    $amount *= 1000;
+                }
+
+                if ($amount >= 500) {
+                    $score += 2;
+                    $reasons[] = 'Client has meaningful spending history';
+                } elseif ($amount < 50) {
+                    $score -= 1;
+                    $reasons[] = 'Client spending is very low';
+                }
+            }
+
+            if (str_contains($spending, 'new') || str_contains($spending, '0') || str_contains($spending, 'no hire')) {
+                $score -= 2;
+                $reasons[] = 'Client appears new or has no hire history';
+            }
+        } else {
+            $reasons[] = 'Client spending not provided';
+        }
+
+        $budget = strtolower((string)($jobContext['budget'] ?? ''));
+        if ($budget !== '' && (str_contains($budget, 'unpaid') || str_contains($budget, 'commission only') || str_contains($budget, 'free trial'))) {
+            $score -= 2;
+            $reasons[] = 'Budget terms look unsafe';
+        }
+
+        if (!empty($jobContext['job_type']) && !empty($jobContext['budget'])) {
+            $score += 1;
+            $reasons[] = 'Job type and budget are clearly defined';
+        }
+
+        $description = strtolower($jobDescription);
+        $suspiciousSignals = ['telegram', 'whatsapp', 'pay upfront', 'security deposit', 'outside upwork', 'free sample'];
+        foreach ($suspiciousSignals as $signal) {
+            if (str_contains($description, $signal)) {
+                $score -= 3;
+                $reasons[] = "Suspicious signal found: {$signal}";
+            }
+        }
+
+        $riskLevel = 'medium';
+        $shouldApply = true;
+
+        if ($score <= -2) {
+            $riskLevel = 'high';
+            $shouldApply = false;
+        } elseif ($score >= 3) {
+            $riskLevel = 'low';
+            $shouldApply = true;
+        }
+
+        $confidence = min(95, max(55, 55 + (abs($score) * 8)));
+
+        return [
+            'score' => $score,
+            'risk_level' => $riskLevel,
+            'should_apply' => $shouldApply,
+            'confidence' => $confidence,
+            'reasoning' => implode('; ', array_unique($reasons)),
+        ];
     }
 
     /**

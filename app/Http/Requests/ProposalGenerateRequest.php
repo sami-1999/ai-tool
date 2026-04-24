@@ -26,8 +26,23 @@ class ProposalGenerateRequest extends FormRequest
     {
         return [
             'job_description' => 'required|string|min:50',
-            'provider' => 'nullable|string|in:openai,claude,gemini',
+            'client_name' => 'nullable|string|max:120',
+            'client_rating' => 'nullable|numeric|min:0|max:5',
+            'client_spending' => 'nullable|string|max:100',
+            'job_type' => 'nullable|string|max:50',
+            'budget' => 'nullable|string|max:100',
+            'force_generate' => 'nullable|boolean',
+            'provider' => 'nullable|string|in:openai,claude,gemini,groq',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('force_generate')) {
+            $this->merge([
+                'force_generate' => filter_var($this->input('force_generate'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE),
+            ]);
+        }
     }
 
     protected function failedValidation(Validator $validator)

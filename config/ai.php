@@ -17,11 +17,11 @@ return [
     |--------------------------------------------------------------------------
     |
     | The default AI provider to use for proposal generation.
-    | Supported providers: "claude", "openai"
+    | Supported providers: "groq", "gemini", "claude", "openai"
     |
     */
 
-    'default_provider' => env('AI_DEFAULT_PROVIDER', 'claude'),
+    'default_provider' => env('AI_DEFAULT_PROVIDER', 'groq'),
 
     /*
     |--------------------------------------------------------------------------
@@ -33,6 +33,16 @@ return [
     */
 
     'providers' => [
+        'groq' => [
+            'name' => 'Groq Llama 3.1 8B',
+            'description' => 'Ultra-fast and free-friendly for proposal generation',
+            'enabled' => env('AI_GROQ_ENABLED', true),
+        ],
+        'gemini' => [
+            'name' => 'Gemini 1.5 Flash',
+            'description' => 'Fast and cost-effective alternative',
+            'enabled' => env('AI_GEMINI_ENABLED', true),
+        ],
         'claude' => [
             'name' => 'Claude 3.5 Sonnet',
             'description' => 'Best for creative and human-like proposals',

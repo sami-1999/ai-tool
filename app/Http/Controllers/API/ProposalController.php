@@ -32,10 +32,9 @@ class ProposalController extends Controller
     {
         $userId = $request->user()->id;
         $validated = $request->validated();
-        $jobDescription = $validated['job_description'];
         $provider = $validated['provider'] ?? null;
-        
-        $proposal = $this->proposalService->generateProposal($userId, $jobDescription, $provider);
+
+        $proposal = $this->proposalService->generateProposal($userId, $validated, $provider);
         return ApiResponse::success($proposal, 'Proposal generated successfully', 201);
     }
 
