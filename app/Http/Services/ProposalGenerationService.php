@@ -186,13 +186,18 @@ class ProposalGenerationService
      */
     private function validateUsageLimits(string $userId): void
     {
+        $dailyLimit = (int) config('ai.generation.daily_limit', 10);
+
+        // Set AI_DAILY_LIMIT=0 (or negative) to disable limit in local/testing.
+        if ($dailyLimit <= 0) {
+            return;
+        }
+
         $todayUsage = UsageLog::where('user_id', $userId)
             ->where('request_type', 'proposal_generation')
-            ->whereDate('created_at', today())
+            ->whereDate('date', today())
             ->sum('count');
-        
-        $dailyLimit = 10; // Configurable limit
-        
+
         if ($todayUsage >= $dailyLimit) {
             throw new \Exception('Daily proposal generation limit reached. Please try again tomorrow.');
         }
@@ -242,7 +247,99 @@ class ProposalGenerationService
         ];
     }
 
+    /**
+     * AI-driven fake job detection and authenticity assessment
+     */
     private function assessJobAuthenticity(string $jobDescription, array $jobContext): array
+    {
+        $prompt = $this->buildFakeJobDetectionPrompt($jobDescription, $jobContext);
+        
+        $aiResponse = $this->generateWithProvider($prompt, null);
+        
+        if (!$aiResponse['success']) {
+            Log::warning('AI fake job detection failed, using fallback', [
+                'error' => $aiResponse['error'] ?? 'Unknown error'
+            ]);
+            return $this->fallbackAuthenticityCheck($jobDescription, $jobContext);
+        }
+        
+        return $this->parseAuthenticityResponse($aiResponse['content']);
+    }
+
+    /**
+     * Build AI prompt for fake job detection
+     */
+    private function buildFakeJobDetectionPrompt(string $jobDescription, array $jobContext): string
+    {
+        $contextInfo = json_encode($jobContext, JSON_PRETTY_PRINT);
+        
+        return <<<PROMPT
+You are an expert at detecting fake/scam jobs on freelancing platforms. Analyze this job posting and determine if it's legitimate or risky.
+
+JOB DESCRIPTION:
+{$jobDescription}
+
+CLIENT CONTEXT:
+{$contextInfo}
+
+Analyze for red flags:
+- Suspicious payment terms (upfront payment, security deposits, commission-only)
+- Off-platform communication requests (Telegram, WhatsApp, personal email)
+- Vague job descriptions with unrealistic promises
+- Brand-new clients with no history asking for free trials
+- Grammar/spelling that suggests scam operations
+- Budget mismatches (enterprise work for \$5)
+
+Return ONLY valid JSON (no markdown):
+{
+  "risk_level": "low|medium|high",
+  "should_apply": true|false,
+  "confidence": 55-95,
+  "score": -10 to +10,
+  "reasoning": "concise explanation of red flags or green flags"
+}
+PROMPT;
+    }
+
+    /**
+     * Parse AI authenticity response
+     */
+    private function parseAuthenticityResponse(string $content): array
+    {
+        $content = trim($content);
+        $content = preg_replace('/```json\s*/', '', $content);
+        $content = preg_replace('/```\s*$/', '', $content);
+        $content = trim($content);
+        
+        $decoded = json_decode($content, true);
+        
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return [
+                'risk_level' => $decoded['risk_level'] ?? 'medium',
+                'should_apply' => $decoded['should_apply'] ?? true,
+                'confidence' => $decoded['confidence'] ?? 70,
+                'score' => $decoded['score'] ?? 0,
+                'reasoning' => $decoded['reasoning'] ?? 'AI analysis completed',
+            ];
+        }
+        
+        Log::warning('Failed to parse AI authenticity response', [
+            'content' => substr($content, 0, 200)
+        ]);
+        
+        return [
+            'risk_level' => 'medium',
+            'should_apply' => true,
+            'confidence' => 60,
+            'score' => 0,
+            'reasoning' => 'Could not parse AI response',
+        ];
+    }
+
+    /**
+     * Fallback algorithmic check if AI fails
+     */
+    private function fallbackAuthenticityCheck(string $jobDescription, array $jobContext): array
     {
         $score = 0;
         $reasons = [];
@@ -256,8 +353,6 @@ class ProposalGenerationService
                 $score -= 2;
                 $reasons[] = 'Client rating is low';
             }
-        } else {
-            $reasons[] = 'Client rating not provided';
         }
 
         $spending = strtolower((string)($jobContext['client_spending'] ?? ''));
@@ -276,24 +371,6 @@ class ProposalGenerationService
                     $reasons[] = 'Client spending is very low';
                 }
             }
-
-            if (str_contains($spending, 'new') || str_contains($spending, '0') || str_contains($spending, 'no hire')) {
-                $score -= 2;
-                $reasons[] = 'Client appears new or has no hire history';
-            }
-        } else {
-            $reasons[] = 'Client spending not provided';
-        }
-
-        $budget = strtolower((string)($jobContext['budget'] ?? ''));
-        if ($budget !== '' && (str_contains($budget, 'unpaid') || str_contains($budget, 'commission only') || str_contains($budget, 'free trial'))) {
-            $score -= 2;
-            $reasons[] = 'Budget terms look unsafe';
-        }
-
-        if (!empty($jobContext['job_type']) && !empty($jobContext['budget'])) {
-            $score += 1;
-            $reasons[] = 'Job type and budget are clearly defined';
         }
 
         $description = strtolower($jobDescription);
@@ -301,21 +378,12 @@ class ProposalGenerationService
         foreach ($suspiciousSignals as $signal) {
             if (str_contains($description, $signal)) {
                 $score -= 3;
-                $reasons[] = "Suspicious signal found: {$signal}";
+                $reasons[] = "Suspicious signal: {$signal}";
             }
         }
 
-        $riskLevel = 'medium';
-        $shouldApply = true;
-
-        if ($score <= -2) {
-            $riskLevel = 'high';
-            $shouldApply = false;
-        } elseif ($score >= 3) {
-            $riskLevel = 'low';
-            $shouldApply = true;
-        }
-
+        $riskLevel = $score <= -2 ? 'high' : ($score >= 3 ? 'low' : 'medium');
+        $shouldApply = $score > -2;
         $confidence = min(95, max(55, 55 + (abs($score) * 8)));
 
         return [

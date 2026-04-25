@@ -2,37 +2,146 @@
 
 namespace App\Http\Services;
 
+use Illuminate\Support\Facades\Log;
+
 class JobAnalysisService
 {
+    public function __construct(
+        private GroqService $groqService,
+        private GeminiService $geminiService,
+        private ClaudeService $claudeService,
+        private OpenAIService $openAIService
+    ) {}
+
     /**
-     * Analyze job description and extract relevant information
+     * Analyze job description using AI (fully AI-driven approach)
      * 
      * @param string $jobDescription
      * @return array
      */
     public function analyze(string $jobDescription): array
     {
-        // Extract job type based on keywords
-        $jobType = $this->detectJobType($jobDescription);
+        $prompt = $this->buildJobAnalysisPrompt($jobDescription);
         
-        // Extract required skills
-        $skills = $this->extractSkills($jobDescription);
+        $aiResponse = $this->callAIProvider($prompt);
         
-        // Extract integrations/tools
-        $integrations = $this->extractIntegrations($jobDescription);
+        if (!$aiResponse['success']) {
+            Log::warning('AI job analysis failed, using fallback', [
+                'error' => $aiResponse['error'] ?? 'Unknown error'
+            ]);
+            return $this->fallbackAnalysis($jobDescription);
+        }
         
-        // Extract industry
-        $industry = $this->detectIndustry($jobDescription);
-        
-        // Extract pain point
-        $painPoint = $this->extractPainPoint($jobDescription);
+        $analysis = $this->parseAIAnalysis($aiResponse['content']);
         
         return [
-            'job_type' => $jobType,
-            'skills' => $skills,
-            'integrations' => $integrations,
-            'industry' => $industry,
-            'pain_point' => $painPoint,
+            'job_type' => $analysis['job_type'] ?? 'general',
+            'skills' => $analysis['skills'] ?? [],
+            'integrations' => $analysis['integrations'] ?? [],
+            'industry' => $analysis['industry'] ?? 'general',
+            'pain_point' => $analysis['pain_point'] ?? '',
+            'description' => $jobDescription
+        ];
+    }
+
+    /**
+     * Build AI prompt for comprehensive job analysis
+     */
+    private function buildJobAnalysisPrompt(string $jobDescription): string
+    {
+        return <<<PROMPT
+Analyze this job posting and extract structured data. Return ONLY valid JSON, no markdown formatting.
+
+JOB DESCRIPTION:
+{$jobDescription}
+
+Extract:
+1. job_type: categorize as one of: web development, mobile development, design, content writing, data analysis, digital marketing, devops, ai/ml, blockchain, general
+2. skills: array of technical skills mentioned (e.g., ["PHP", "Laravel", "React"])
+3. integrations: array of tools/platforms mentioned (e.g., ["Stripe", "AWS", "Firebase"])
+4. industry: categorize as: healthcare, fintech, ecommerce, education, real estate, saas, entertainment, general
+5. pain_point: extract the client's core problem in 1-2 sentences (what they're struggling with)
+
+Return JSON format:
+{
+  "job_type": "string",
+  "skills": ["skill1", "skill2"],
+  "integrations": ["tool1", "tool2"],
+  "industry": "string",
+  "pain_point": "string"
+}
+PROMPT;
+    }
+
+    /**
+     * Call AI provider with fallback chain
+     */
+    private function callAIProvider(string $prompt): array
+    {
+        $providers = [
+            ['service' => $this->groqService, 'config' => 'services.groq.api_key'],
+            ['service' => $this->geminiService, 'config' => 'services.gemini.api_key'],
+            ['service' => $this->claudeService, 'config' => 'services.claude.api_key'],
+            ['service' => $this->openAIService, 'config' => 'services.openai.api_key'],
+        ];
+
+        foreach ($providers as $provider) {
+            if (config($provider['config'])) {
+                try {
+                    $response = $provider['service']->generateProposal($prompt);
+                    if ($response['success']) {
+                        return $response;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('AI provider failed in job analysis', [
+                        'provider' => get_class($provider['service']),
+                        'error' => $e->getMessage()
+                    ]);
+                    continue;
+                }
+            }
+        }
+
+        return ['success' => false, 'error' => 'All AI providers failed'];
+    }
+
+    /**
+     * Parse AI response and extract structured data
+     */
+    private function parseAIAnalysis(string $content): array
+    {
+        // Try to extract JSON from response
+        $content = trim($content);
+        
+        // Remove markdown code blocks if present
+        $content = preg_replace('/```json\s*/', '', $content);
+        $content = preg_replace('/```\s*$/', '', $content);
+        $content = trim($content);
+        
+        $decoded = json_decode($content, true);
+        
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return $decoded;
+        }
+        
+        Log::warning('Failed to parse AI job analysis response', [
+            'content' => substr($content, 0, 200)
+        ]);
+        
+        return [];
+    }
+
+    /**
+     * Fallback to keyword-based analysis if AI fails
+     */
+    private function fallbackAnalysis(string $jobDescription): array
+    {
+        return [
+            'job_type' => $this->detectJobType($jobDescription),
+            'skills' => $this->extractSkills($jobDescription),
+            'integrations' => $this->extractIntegrations($jobDescription),
+            'industry' => $this->detectIndustry($jobDescription),
+            'pain_point' => $this->extractPainPoint($jobDescription),
             'description' => $jobDescription
         ];
     }
