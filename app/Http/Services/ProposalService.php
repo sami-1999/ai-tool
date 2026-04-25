@@ -3,16 +3,11 @@
 namespace App\Http\Services;
 
 use App\Http\Repositories\ProposalRepository;
-use App\Http\Services\JobAnalysisService;
-use App\Http\Services\ProjectMatchingService;
-use App\Http\Services\ProposalGenerationService;
 
 class ProposalService
 {
     public function __construct(
         private ProposalRepository $proposalRepo,
-        private JobAnalysisService $jobAnalysisService,
-        private ProjectMatchingService $projectMatchingService,
         private ProposalGenerationService $proposalGenerationService
     ) {}
 
@@ -29,11 +24,25 @@ class ProposalService
 
     public function submitFeedback(string $proposalId, string $userId, bool $success)
     {
-        return $this->proposalRepo->storeFeedback($proposalId, $userId, $success);
+        $feedback = $this->proposalRepo->storeFeedback($proposalId, $userId, $success);
+        
+        // Trigger the learning system for successful proposals
+        if ($success === true) {
+            $this->proposalGenerationService->processFeedback((int)$proposalId, $success, $userId);
+        }
+        
+        return $feedback;
     }
 
-    public function show(string $id)
+    public function show(string $id, string $userId)
     {
-        return $this->proposalRepo->find($id);
+        $proposal = $this->proposalRepo->find($id);
+        
+        // Authorization check - verify the proposal belongs to the user
+        if ($proposal && $proposal->proposal_request_user_id !== $userId) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('You are not authorized to view this proposal.');
+        }
+        
+        return $proposal;
     }
 }

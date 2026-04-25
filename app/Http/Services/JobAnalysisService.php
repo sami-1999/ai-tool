@@ -24,17 +24,21 @@ class JobAnalysisService
         // Extract industry
         $industry = $this->detectIndustry($jobDescription);
         
+        // Extract pain point
+        $painPoint = $this->extractPainPoint($jobDescription);
+        
         return [
             'job_type' => $jobType,
             'skills' => $skills,
             'integrations' => $integrations,
             'industry' => $industry,
+            'pain_point' => $painPoint,
             'description' => $jobDescription
         ];
     }
 
     /**
-     * Detect job type from description
+     * Detect job type from description using keyword scoring
      */
     private function detectJobType(string $description): string
     {
@@ -49,15 +53,24 @@ class JobAnalysisService
             'digital marketing' => ['marketing', 'social media', 'ads', 'campaign']
         ];
 
+        $scores = [];
+        
+        // Score ALL job types by keyword count
         foreach ($jobTypeKeywords as $type => $keywords) {
+            $score = 0;
             foreach ($keywords as $keyword) {
                 if (strpos($description, $keyword) !== false) {
-                    return $type;
+                    $score++;
                 }
             }
+            $scores[$type] = $score;
         }
-
-        return 'general';
+        
+        // Return the highest scoring type
+        arsort($scores);
+        $topType = array_key_first($scores);
+        
+        return ($scores[$topType] > 0) ? $topType : 'general';
     }
 
     /**
@@ -137,5 +150,35 @@ class JobAnalysisService
         }
 
         return 'general';
+    }
+
+    /**
+     * Extract pain point from job description
+     * 
+     * @param string $description
+     * @return string
+     */
+    private function extractPainPoint(string $description): string
+    {
+        $problemSignals = [
+            'struggling', 'need help', 'having trouble', 'broken', 'failing',
+            'not working', 'can\'t', 'cannot', 'slow', 'outdated', 'migration',
+            'rebuild', 'fix', 'urgent', 'asap', 'deadline', 'behind'
+        ];
+        
+        // Split into sentences
+        $sentences = preg_split('/(?<=[.!?])\s+/', $description, -1, PREG_SPLIT_NO_EMPTY);
+        
+        foreach ($sentences as $sentence) {
+            $lowerSentence = strtolower($sentence);
+            foreach ($problemSignals as $signal) {
+                if (strpos($lowerSentence, $signal) !== false) {
+                    // Return first matching sentence (max 150 chars)
+                    return substr(trim($sentence), 0, 150);
+                }
+            }
+        }
+        
+        return '';
     }
 }

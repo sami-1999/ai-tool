@@ -40,6 +40,7 @@ class ProjectMatchingService
      * Scoring Rules per v2 specs:
      * - Skill match: +10
      * - Integration match: +8
+     * - Job type relevance: +6
      * - Industry match: +5
      */
     private function scoreProjects($projects, array $jobAnalysis): array
@@ -50,6 +51,7 @@ class ProjectMatchingService
             $score = 0;
             $skillMatches = 0;
             $integrationMatches = 0;
+            $jobTypeRelevant = false;
             
             // Load project with relationships
             $project->load(['skills', 'integrations']);
@@ -62,6 +64,12 @@ class ProjectMatchingService
             $integrationMatches = $this->countIntegrationMatches($project, $jobAnalysis['integrations'] ?? []);
             $score += $integrationMatches * 8;
             
+            // Job type relevance check (+6)
+            if ($this->isJobTypeRelevant($project, $jobAnalysis['job_type'])) {
+                $score += 6;
+                $jobTypeRelevant = true;
+            }
+            
             // Industry match (+5)
             if ($project->industry && 
                 strtolower($project->industry) === strtolower($jobAnalysis['industry'])) {
@@ -73,6 +81,7 @@ class ProjectMatchingService
                 'score' => $score,
                 'skill_matches' => $skillMatches,
                 'integration_matches' => $integrationMatches,
+                'job_type_relevant' => $jobTypeRelevant,
                 'industry_match' => ($project->industry && strtolower($project->industry) === strtolower($jobAnalysis['industry']))
             ];
         }

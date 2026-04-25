@@ -31,6 +31,9 @@ class ProposalGenerateRequest extends FormRequest
             'client_spending' => 'nullable|string|max:100',
             'job_type' => 'nullable|string|max:50',
             'budget' => 'nullable|string|max:100',
+            'job_posted_at' => 'nullable|date',
+            'proposals_count' => 'nullable|integer|min:0',
+            'has_payment_verified' => 'nullable|boolean',
             'force_generate' => 'nullable|boolean',
             'provider' => 'nullable|string|in:openai,claude,gemini,groq',
         ];

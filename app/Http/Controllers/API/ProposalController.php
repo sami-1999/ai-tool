@@ -41,9 +41,10 @@ class ProposalController extends Controller
     /**
      * Display the specified proposal.
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
-        $data = $this->proposalService->show($id);
+        $userId = $request->user()->id;
+        $data = $this->proposalService->show($id, $userId);
         return ApiResponse::success($data, 'Proposal retrieved successfully');
     }
 
