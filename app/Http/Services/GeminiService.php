@@ -47,14 +47,14 @@ class GeminiService
                     [
                         'parts' => [
                             [
-                                'text' => $prompt
+                                'text' => 'You are an expert freelancer proposal writer and job analyst. Follow prompt instructions exactly and return valid JSON response as specified.\n\n' . $prompt
                             ]
                         ]
                     ]
                 ],
                 'generationConfig' => [
                     'temperature' => $this->temperature,
-                    'maxOutputTokens' => 300, // ~120-150 words
+                    'maxOutputTokens' => 800, // Increased for structured JSON
                     'topP' => 0.8,
                     'topK' => 40
                 ],

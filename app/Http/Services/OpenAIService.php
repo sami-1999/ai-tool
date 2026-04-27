@@ -37,7 +37,7 @@ class OpenAIService
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'You are an expert freelancer proposal writer. Generate professional, personalized Upwork proposals that are human-like and compelling.'
+                        'content' => 'You are an expert freelancer proposal writer and job analyst. Follow prompt instructions exactly and return valid JSON response as specified.'
                     ],
                     [
                         'role' => 'user',
@@ -45,7 +45,7 @@ class OpenAIService
                     ]
                 ],
                 'temperature' => $this->temperature,
-                'max_tokens' => 200, // Limit for ~120 words
+                'max_tokens' => 800, // Increased for structured JSON
             ]);
 
             $data = $response->json();

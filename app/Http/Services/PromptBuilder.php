@@ -48,24 +48,44 @@ class PromptBuilder
             throw new \InvalidArgumentException('userId cannot be empty');
         }
 
-        $painPoint = $this->buildJobPainPointExtract($jobDescription, $jobAnalysis);
+        $promptTemplate = file_get_contents(
+        resource_path('prompts/master_proposal_prompt.txt')
+    );
 
-        $prompt  = "Generate a personalized Upwork proposal based on the following:\n\n";
-        $prompt .= $this->buildClientContextSection($jobContext, $riskAssessment);
-        $prompt .= $this->buildFreelancerBackground($userProfile, $matchedData);
+    if ($promptTemplate === false) {
+        throw new \RuntimeException('Master prompt file not found at resources/prompts/master_proposal_prompt.txt');
+    }
 
-        $successfulPatterns = $this->getSuccessfulProposalPatterns(
-            $userId,
-            $jobAnalysis['job_type'] ?? 'general'
-        );
-        if (!empty($successfulPatterns)) {
-            $prompt .= $this->buildSuccessfulPatternsSection($successfulPatterns);
-        }
+    $freelancerBackground = $this->buildFreelancerBackground($userProfile, $matchedData);
 
-        $prompt .= $this->buildJobDescriptionSection($jobDescription);
-        $prompt .= $this->buildRulesSection($painPoint, $jobContext);
+    $successfulPatterns = $this->getSuccessfulProposalPatterns(
+        $userId,
+        $jobAnalysis['job_type'] ?? 'general'
+    );
 
-        return $prompt;
+    $patternsBlock = !empty($successfulPatterns)
+        ? $this->buildSuccessfulPatternsSection($successfulPatterns)
+        : '';
+
+    $clientContextBlock = $this->buildClientContextSection($jobContext, $riskAssessment);
+
+    $finalPrompt = str_replace(
+        [
+            '{{JOB_DESCRIPTION}}',
+            '{{FREELANCER_BACKGROUND}}',
+            '{{CLIENT_CONTEXT}}',
+            '{{SUCCESSFUL_PATTERNS}}',
+        ],
+        [
+            substr(trim($jobDescription), 0, self::JOB_DESC_TRIM),
+            $freelancerBackground,
+            $clientContextBlock,
+            $patternsBlock,
+        ],
+        $promptTemplate
+    );
+
+    return $finalPrompt;
     }
 
     private function buildClientContextSection(array $jobContext, array $riskAssessment): string
@@ -162,7 +182,7 @@ class PromptBuilder
 
             $project  = $scoredProject['project'];
             $index    = $count + 1;
-            $section .= "{$index}. {$project->title}\n";
+            $section .= "{$index}. " . ($project->title ?? 'Untitled Project') . "\n";
             $section .= "   Description: " . substr($project->description ?? '', 0, self::DESCRIPTION_TRIM) . "...\n";
 
             if (!empty($project->challenges)) {
@@ -191,7 +211,8 @@ class PromptBuilder
 
         foreach ($successfulPatterns as $pattern) {
             if (!empty($pattern['hook_opening_line'])) {
-                $section .= "- Opening style that got hired: " . $pattern['hook_opening_line'] . "\n";
+                $described = $this->describeHookStyle($pattern['hook_opening_line']);
+                $section  .= "- Opening style that worked: {$described}\n";
             }
             if (!empty($pattern['tone'])) {
                 $section .= "- Tone that worked: " . $pattern['tone'] . "\n";
@@ -209,7 +230,10 @@ class PromptBuilder
      */
     private function buildRulesSection(string $painPoint = '', array $jobContext = []): string
     {
-        $clientTier   = $jobContext['client_tier_resolved'] ?? 'standard';
+        $spending   = $jobContext['client_spending'] ?? '';
+        $clientTier = $spending
+            ? $this->resolveClientTier($spending)
+            : ($jobContext['client_tier_resolved'] ?? 'standard');
         $toneGuidance = $this->resolveToneGuidance($clientTier);
         $forbiddenStr = implode(', ', array_map(fn($p) => "\"{$p}\"", self::FORBIDDEN_PHRASES));
 
@@ -314,6 +338,10 @@ class PromptBuilder
             'struggling', 'need help', 'having trouble', 'broken', 'failing',
             'not working', 'can\'t', 'cannot', 'slow', 'outdated', 'migration',
             'rebuild', 'fix', 'urgent', 'ASAP', 'deadline', 'behind',
+            'overwhelmed', 'manual process', 'time-consuming', 'inefficient',
+            'error-prone', 'automate', 'scale', 'growing fast', 'too much time',
+            'repetitive', 'messy', 'disorganized', 'no system', 'currently doing',
+            'every day we', 'every week we', 'spending hours',
         ];
 
         $sentences = preg_split('/(?<=[.!?])\s+/', $jobDescription, -1, PREG_SPLIT_NO_EMPTY);
@@ -353,5 +381,37 @@ class PromptBuilder
             'established' => 'Confident but warm — they know what they want. Show you understand their business, not just the task.',
             default       => 'Friendly and professional — build trust quickly without overselling. Clarity beats cleverness.',
         };
+    }
+
+    /**
+     * Convert a raw hook line into a style description
+     * so the AI learns the pattern without copying the text.
+     */
+    private function describeHookStyle(string $hookLine): string
+    {
+        $wordCount = str_word_count($hookLine);
+        $startsWithProblem = preg_match(
+            '/^(your|the|this|when|if|automating|fixing|building)/i',
+            trim($hookLine)
+        );
+
+        $style = "~{$wordCount} words";
+
+        if ($startsWithProblem) {
+            $style .= ', started with client problem (not with "I")';
+        }
+
+        if (str_contains(strtolower($hookLine), 'manual')) {
+            $style .= ', called out manual work specifically';
+        }
+        if (str_contains(strtolower($hookLine), 'automat')) {
+            $style .= ', led with automation outcome';
+        }
+        if (str_contains(strtolower($hookLine), 'time') ||
+            str_contains(strtolower($hookLine), 'hour')) {
+            $style .= ', referenced time saving';
+        }
+
+        return $style;
     }
 }

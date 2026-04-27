@@ -97,7 +97,51 @@ class ProposalGenerationService
             // 6. Choose AI provider and generate proposal
             $aiResponse = $this->generateWithProvider($prompt, $provider);
 
-            // 6.1. Calculate job fit score
+            if (!$aiResponse['success']) {
+                $errorMsg = $aiResponse['error'] ?? 'Unknown error';
+                Log::error('AI provider failed', [
+                    'provider' => $provider,
+                    'error' => $errorMsg,
+                    'response' => $aiResponse
+                ]);
+                throw new \Exception('Failed to generate proposal: ' . $errorMsg);
+            }
+
+            // 6.1. Parse structured AI response
+            try {
+                $parsedResponse = $this->parseAiResponse($aiResponse['content']);
+            } catch (\Exception $e) {
+                Log::error('Failed to parse AI response', [
+                    'provider' => $provider,
+                    'error' => $e->getMessage(),
+                    'raw_content' => substr($aiResponse['content'] ?? '', 500)
+                ]);
+                throw new \Exception('Failed to parse AI response: ' . $e->getMessage());
+            }
+
+            // 6.2. Handle critical risk case
+            if (!$parsedResponse['should_send']) {
+                $this->logUsage($userId, 'proposal_generation');
+
+                return [
+                    'proposal_generated' => false,
+                    'risk_assessment' => [
+                        'risk_level' => $parsedResponse['risk_level'],
+                        'reasoning' => $parsedResponse['notes']
+                    ],
+                    'apply_recommendation' => [
+                        'should_apply' => false,
+                        'message' => 'Job flagged as critical risk by AI analysis. Proposal generation blocked.'
+                    ],
+                    'job_analysis' => $jobAnalysis,
+                    'matched_projects' => $matchedData,
+                    'proposal' => null,
+                    'tokens_used' => $aiResponse['tokens_used'],
+                    'provider_used' => $aiResponse['model_used']
+                ];
+            }
+
+            // 6.3. Calculate job fit score
             $fitScore = $this->jobFitScoringService->calculateFitScore(
                 $userId,
                 $jobAnalysis,
@@ -105,30 +149,32 @@ class ProposalGenerationService
                 $jobContext['job_posted_at'] ?? null
             );
 
-            // 6.2. Validate proposal quality
+            // 6.4. Validate proposal quality
             $quality = $this->proposalQualityService->validate(
-                $aiResponse['content'],
+                $parsedResponse['proposal_text'],
                 $jobDescription
             );
 
-            // 6.3. Retry if quality is poor
+            // 6.5. Retry if quality is poor
             if (!$quality['passed'] && $quality['regenerate']) {
                 Log::warning('Proposal quality check failed, retrying', [
                     'failed_checks' => $quality['failed_checks'],
                     'score' => $quality['score']
                 ]);
 
-                $retryPrompt = $this->buildRetryPrompt($prompt, $quality['failed_checks'], $aiResponse['content']);
-                $aiResponse = $this->generateWithProvider($retryPrompt, $provider);
-                $quality = $this->proposalQualityService->validate($aiResponse['content'], $jobDescription);
-            }
-            
-            if (!$aiResponse['success']) {
-                throw new \Exception('Failed to generate proposal: ' . $aiResponse['error']);
+                $retryPrompt = $this->buildRetryPrompt($prompt, $quality['failed_checks'], $parsedResponse['proposal_text']);
+                $retryResponse = $this->generateWithProvider($retryPrompt, $provider);
+                
+                if (!$retryResponse['success']) {
+                    throw new \Exception('Failed to generate proposal retry: ' . $retryResponse['error']);
+                }
+                
+                $parsedResponse = $this->parseAiResponse($retryResponse['content']);
+                $quality = $this->proposalQualityService->validate($parsedResponse['proposal_text'], $jobDescription);
             }
             
             // 7. Save proposal
-            $proposal = $this->storeProposal($proposalRequest->id, $aiResponse, $quality['score']);
+            $proposal = $this->storeProposal($proposalRequest->id, $parsedResponse, $quality['score']);
             
             // 8. Log usage
             $this->logUsage($userId, 'proposal_generation');
@@ -169,14 +215,48 @@ class ProposalGenerationService
         ];
         
         $priority = array_merge([$provider], array_keys(array_diff_key($providers, [$provider => null])));
+        $lastError = null;
         
         foreach ($priority as $name) {
             if (!isset($providers[$name])) continue;
             [$service, $configKey] = $providers[$name];
-            if (config($configKey)) {
-                return $service->generateProposal($prompt);
+            
+            if (!config($configKey)) {
+                Log::info("Skipping {$name} provider - API key not configured");
+                continue;
+            }
+            
+            try {
+                $result = $service->generateProposal($prompt);
+                
+                if ($result['success']) {
+                    Log::info("Successfully generated proposal using {$name}", [
+                        'tokens_used' => $result['tokens_used'],
+                        'model' => $result['model_used']
+                    ]);
+                    return $result;
+                } else {
+                    $lastError = $result['error'] ?? 'Unknown error';
+                    Log::warning("{$name} provider failed", [
+                        'error' => $lastError,
+                        'will_retry' => true
+                    ]);
+                    continue;
+                }
+            } catch (\Exception $e) {
+                $lastError = $e->getMessage();
+                Log::error("Exception in {$name} provider", [
+                    'error' => $lastError,
+                    'will_retry' => true
+                ]);
+                continue;
             }
         }
+        
+        Log::warning('All AI providers failed, falling back to demo proposal', [
+            'last_error' => $lastError,
+            'attempted_providers' => $priority
+        ]);
         
         return $this->generateDemoProposal();
     }
@@ -311,6 +391,25 @@ PROMPT;
         $content = preg_replace('/```\s*$/', '', $content);
         $content = trim($content);
         
+        // Try to fix truncated JSON by completing the structure
+        if (substr($content, -1) !== '}' && substr($content, -1) !== ']') {
+            Log::warning('Detected truncated JSON, attempting to fix', [
+                'content_end' => substr($content, -50),
+                'content_length' => strlen($content)
+            ]);
+            
+            // Try to close the JSON structure
+            $openBraces = substr_count($content, '{') - substr_count($content, '}');
+            $openBrackets = substr_count($content, '[') - substr_count($content, ']');
+            
+            for ($i = 0; $i < $openBraces; $i++) {
+                $content .= '}';
+            }
+            for ($i = 0; $i < $openBrackets; $i++) {
+                $content .= ']';
+            }
+        }
+        
         $decoded = json_decode($content, true);
         
         if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
@@ -324,7 +423,10 @@ PROMPT;
         }
         
         Log::warning('Failed to parse AI authenticity response', [
-            'content' => substr($content, 0, 200)
+            'content' => substr($content, 0, 200),
+            'json_error' => json_last_error_msg(),
+            'json_error_code' => json_last_error(),
+            'attempted_fix' => true
         ]);
         
         return [
@@ -402,9 +504,9 @@ PROMPT;
     {
         return $this->proposalRepo->store([
             'proposal_request_id' => $proposalRequestId,
-            'content' => $aiResponse['content'],
-            'tokens_used' => $aiResponse['tokens_used'],
-            'model_used' => $aiResponse['model_used'],
+            'content' => $aiResponse['proposal_text'] ?? $aiResponse['content'] ?? '',
+            'tokens_used' => $aiResponse['tokens_used'] ?? 0,
+            'model_used' => $aiResponse['model_used'] ?? 'unknown',
             'quality_score' => $qualityScore,
         ]);
     }
@@ -554,6 +656,155 @@ PROMPT;
             ->select('skills.name', 'user_skills.proficiency_level')
             ->get()
             ->toArray();
+    }
+
+    /**
+     * Parse structured JSON response from AI
+     */
+    private function parseAiResponse(string $rawResponse): array
+    {
+        // Try to extract JSON from response with headers and formatting
+        $jsonStart = strpos($rawResponse, '{');
+        $jsonEnd = strrpos($rawResponse, '}');
+        
+        if ($jsonStart !== false && $jsonEnd !== false && $jsonEnd > $jsonStart) {
+            $clean = substr($rawResponse, $jsonStart, $jsonEnd - $jsonStart + 1);
+        } else {
+            // Fallback to stripping markdown code fences
+            $clean = preg_replace('/^```json\s*/i', '', trim($rawResponse));
+            $clean = preg_replace('/\s*```$/', '', $clean);
+        }
+
+        // Try to fix truncated JSON by completing structure
+        if (substr($clean, -1) !== '}' && substr($clean, -1) !== ']') {
+            $openBraces = substr_count($clean, '{') - substr_count($clean, '}');
+            $openBrackets = substr_count($clean, '[') - substr_count($clean, ']');
+            
+            for ($i = 0; $i < $openBraces; $i++) {
+                $clean .= '}';
+            }
+            for ($i = 0; $i < $openBrackets; $i++) {
+                $clean .= ']';
+            }
+        }
+
+        // Log the raw response for debugging
+        Log::info('AI Raw Response', [
+            'raw_length' => strlen($rawResponse),
+            'clean_length' => strlen($clean),
+            'raw_preview' => substr($rawResponse, 0, 200),
+            'clean_preview' => substr($clean, 0, 200),
+        ]);
+
+        $decoded = json_decode($clean, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            Log::error('AI response JSON parse failed', [
+                'raw'   => substr($rawResponse, 0, 500),
+                'clean' => substr($clean, 0, 500),
+                'error' => json_last_error_msg(),
+                'error_code' => json_last_error(),
+            ]);
+            
+            // If JSON parsing fails, try to extract proposal text from the response
+            $proposalText = $this->extractProposalFromText($rawResponse);
+            
+            if (!empty($proposalText)) {
+                Log::warning('Attempting to extract proposal from non-JSON response');
+                return [
+                    'should_send' => true,
+                    'risk_level' => 'MEDIUM',
+                    'fake_signals' => [],
+                    'green_flags' => [],
+                    'pain_point' => '',
+                    'job_category' => '',
+                    'fit_score' => 70,
+                    'strongest_proof' => 'AI generated content',
+                    'honest_gap' => 'Unable to parse structured response',
+                    'proposal_text' => $proposalText,
+                    'word_count' => str_word_count($proposalText),
+                    'hook' => '',
+                    'question' => '',
+                    'confidence' => 'LOW',
+                    'notes' => 'Response was not valid JSON, extracted text instead',
+                ];
+            }
+            
+            throw new \RuntimeException('AI returned invalid JSON: ' . json_last_error_msg());
+        }
+
+        // Critical risk — do not proceed
+        if (($decoded['risk_assessment']['risk_level'] ?? '') === 'CRITICAL') {
+            return [
+                'should_send'  => false,
+                'risk_level'   => 'CRITICAL',
+                'proposal'     => null,
+                'notes'        => $decoded['generation_meta']['notes'] ?? 'Job flagged as high risk',
+            ];
+        }
+
+        return [
+            'should_send'       => $decoded['generation_meta']['should_send'] ?? true,
+            'risk_level'        => $decoded['risk_assessment']['risk_level'] ?? 'MEDIUM',
+            'fake_signals'      => $decoded['risk_assessment']['fake_signals'] ?? [],
+            'green_flags'       => $decoded['risk_assessment']['green_flags'] ?? [],
+            'pain_point'        => $decoded['job_analysis']['primary_pain_point'] ?? '',
+            'job_category'      => $decoded['job_analysis']['job_category'] ?? '',
+            'fit_score'         => $decoded['fit_score']['overall'] ?? 0,
+            'strongest_proof'   => $decoded['fit_score']['strongest_proof_point'] ?? '',
+            'honest_gap'        => $decoded['fit_score']['honest_gap'] ?? 'None',
+            'proposal_text'     => $decoded['proposal']['text'] ?? '',
+            'word_count'        => $decoded['proposal']['word_count'] ?? 0,
+            'hook'              => $decoded['proposal']['hook'] ?? '',
+            'question'          => $decoded['proposal']['question'] ?? '',
+            'confidence'        => $decoded['generation_meta']['confidence'] ?? 'MEDIUM',
+            'notes'             => $decoded['generation_meta']['notes'] ?? '',
+        ];
+    }
+
+    /**
+     * Extract proposal text from non-JSON responses
+     */
+    private function extractProposalFromText(string $text): string
+    {
+        // Look for proposal section in structured responses
+        $proposalPatterns = [
+            '/"proposal":\s*\{[^}]*"text":\s*"([^"]+)"/i',
+            '/"text":\s*"([^"]+)"/i',
+            '/PROPOSAL\s*\n\s*([^\n]+)/i',
+            '/proposal[^:]*:\s*([^\n]+)/i',
+        ];
+        
+        foreach ($proposalPatterns as $pattern) {
+            if (preg_match($pattern, $text, $matches)) {
+                $proposal = trim($matches[1]);
+                if (!empty($proposal) && strlen($proposal) > 20) {
+                    return stripslashes($proposal);
+                }
+            }
+        }
+        
+        // If no specific proposal found, try to extract meaningful text
+        // Remove headers and JSON-like content
+        $clean = preg_replace('/^===.*===\s*/m', '', $text);
+        $clean = preg_replace('/^\s*"[^"]*":\s*/m', '', $clean);
+        $clean = preg_replace('/^\s*\{[^}]*\}\s*/m', '', $clean);
+        $clean = preg_replace('/^\s*\[[^\]]*\]\s*/m', '', $clean);
+        
+        // Split into sentences and take the most meaningful ones
+        $sentences = preg_split('/[.!?]+/', $clean);
+        $sentences = array_filter($sentences, function($sentence) {
+            $sentence = trim($sentence);
+            return strlen($sentence) > 15 && 
+                   !preg_match('/^(risk|fake|signal|green|flag|assessment|analysis)/i', $sentence) &&
+                   !preg_match('/^\s*[{}[\]]/', $sentence);
+        });
+        
+        if (!empty($sentences)) {
+            return implode('. ', array_slice($sentences, 0, 3)) . '.';
+        }
+        
+        return '';
     }
 
     /**
